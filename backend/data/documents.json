@@ -1,0 +1,20 @@
+[
+  {
+    "client": "ABC Technologies",
+    "title": "ABC Phase 2 Proposal",
+    "type": "proposal",
+    "content": "Phase 2 includes ERP integration and deployment improvements."
+  },
+  {
+    "client": "ABC Technologies",
+    "title": "ABC Contract",
+    "type": "contract",
+    "content": "The current enterprise contract is scheduled for renewal in December 2026."
+  },
+  {
+    "client": "ABC Technologies",
+    "title": "Previous Meeting Notes",
+    "type": "meeting_notes",
+    "content": "The client requested clearer deployment milestones."
+  }
+]

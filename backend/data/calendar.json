@@ -1,0 +1,14 @@
+[
+  {
+  "client": "ABC Technologies",
+  "title": "ABC Technologies Meeting",
+  "date": "2026-09-19",
+  "time": "11:00",
+  "participants": [
+    "Rahul",
+    "Priya",
+    "ABC CTO",
+    "ABC Product Manager"
+  ]
+}
+]

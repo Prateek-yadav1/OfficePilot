@@ -1,0 +1,20 @@
+[
+  {
+    "client": "ABC Technologies",
+    "subject": "ERP Integration Requirements",
+    "date": "2026-09-05",
+    "content": "ABC wants ERP integration completed in Phase 2."
+  },
+  {
+    "client": "ABC Technologies",
+    "subject": "Deployment Delay Concern",
+    "date": "2026-09-02",
+    "content": "The client expressed concern regarding the previous deployment delay."
+  },
+  {
+    "client": "XYZ Solutions",
+    "subject": "Pricing Discussion",
+    "date": "2026-09-04",
+    "content": "XYZ requested an updated enterprise pricing proposal."
+  }
+]
