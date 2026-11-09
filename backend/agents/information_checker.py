@@ -5,7 +5,7 @@ from .config import get_model
 
 information_checker = Agent(
     name="information_checker",
-    model=get_model(),
+    model=get_model(max_tokens=128),
     description=(
         "Determines whether the collected meeting information "
         "is sufficient for preparation."

@@ -5,7 +5,7 @@ from .config import get_model
 
 analyst_agent = Agent(
     name="analyst_agent",
-    model=get_model(),
+    model=get_model(max_tokens=650),
     description=(
         "Analyzes meeting information and identifies priorities, "
         "concerns, risks, and discussion points."

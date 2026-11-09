@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from dotenv import load_dotenv
 from google.adk.apps import App, ResumabilityConfig
@@ -26,6 +27,16 @@ async def main():
     )
 
     runner = InMemoryRunner(app=app)
+    tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
+    authenticated_user_id = os.getenv(
+        "OFFICEPILOT_LOCAL_USER_ID",
+        "test_user",
+    ).strip()
+    if not tenant_id or not authenticated_user_id:
+        raise RuntimeError(
+            "Set OFFICEPILOT_LOCAL_TENANT_ID and "
+            "OFFICEPILOT_LOCAL_USER_ID before running."
+        )
 
     # ---------------------------------------------------------
     # CREATE SESSION
@@ -37,6 +48,17 @@ async def main():
         app_name=app.name,
         user_id=user_id,
         session_id="hitl_test_session",
+        state={
+            "user_id": authenticated_user_id,
+            "tenant_id": tenant_id,
+            "action_proposal": (
+                "Action: Create a follow-up task.\n"
+                "Client: ABC Technologies\n"
+                "Task details: [TEST ONLY] Review the Phase 2 ERP "
+                "integration deployment milestones and prepare "
+                "follow-up discussion points."
+            )
+        },
     )
 
     session_id = session.id
@@ -59,90 +81,74 @@ and prepare the required follow-up discussion points.
     print("STARTING ACTION EXECUTOR...")
     print("-" * 80)
 
-    events = []
+    confirmation_event = None
+    confirmation_call = None
 
+    # Run until ADK requests confirmation, then leave this event stream.
     async for event in runner.run_async(
         user_id=user_id,
         session_id=session_id,
         new_message=types.Content(
             role="user",
-            parts=[
-                types.Part(
-                    text=request
-                )
-            ],
+            parts=[types.Part(text=request)],
         ),
     ):
-
-        events.append(event)
-
         print("\nEVENT:")
         print(event)
 
-        # Detect ADK human confirmation request
         if event.content and event.content.parts:
-
             for part in event.content.parts:
-
                 if (
                     part.function_call
                     and part.function_call.name
                     == "adk_request_confirmation"
                 ):
-
+                    confirmation_event = event
                     confirmation_call = part.function_call
+                    break
 
-                    print("\n" + "=" * 80)
-                    print("⏸ HUMAN APPROVAL REQUIRED")
-                    print("=" * 80)
 
-                    print("\nCONFIRMATION REQUEST:")
-                    print(confirmation_call.args)
+    if confirmation_call is None or confirmation_event is None:
+        raise RuntimeError(
+            "ADK did not request human confirmation. "
+            "Check the model output and tool configuration."
+        )
 
-                    print("\n" + "-" * 80)
-                    print("Type APPROVE or REJECT")
-                    print("-" * 80)
+    print("\n" + "=" * 80)
+    print("HUMAN APPROVAL REQUIRED")
+    print("=" * 80)
+    print("\nCONFIRMATION REQUEST:")
+    print(confirmation_call.args)
 
-                    decision = input(
-                    "\nYour decision: "
-                    ).strip().upper()
+    decision = input("\nType APPROVE or REJECT: ").strip().upper()
+    confirmed = decision in {"APPROVE", "YES", "Y"}
 
-                    confirmed = decision in {"APPROVE", "YES", "Y"}
+    print("Human decision:", "APPROVED" if confirmed else "REJECTED")
 
-                    print(
-                        f"\nHuman decision: "
-                        f"{'APPROVED' if confirmed else 'REJECTED'}"
-                    )
+    confirmation_response = types.Content(
+        role="user",
+        parts=[
+            types.Part(
+                function_response=types.FunctionResponse(
+                    id=confirmation_call.id,
+                    name="adk_request_confirmation",
+                    response={"confirmed": confirmed},
+                )
+            )
+        ],
+    )
 
-                    # Build confirmation response
-                    confirmation_response = types.Content(
-                        role="user",
-                        parts=[
-                            types.Part(
-                                function_response=types.FunctionResponse(
-                                    id=confirmation_call.id,
-                                    name="adk_request_confirmation",
-                                    response={
-                                        "confirmed": confirmed
-                                    },
-                                )
-                            )
-                        ],
-                    )
+    print("\nRESUMING WORKFLOW...")
 
-                    print("\n" + "-" * 80)
-                    print("RESUMING WORKFLOW...")
-                    print("-" * 80)
-
-                    async for resumed_event in runner.run_async(
-                        user_id=user_id,
-                        session_id=session_id,
-                        invocation_id=event.invocation_id,
-                        new_message=confirmation_response,
-                    ):
-
-                        print("\nRESUMED EVENT:")
-                        print(resumed_event)
+    # Resume only after the original event stream has been exited.
+    async for resumed_event in runner.run_async(
+        user_id=user_id,
+        session_id=session_id,
+        invocation_id=confirmation_event.invocation_id,
+        new_message=confirmation_response,
+    ):
+        print("\nRESUMED EVENT:")
+        print(resumed_event)
 
     print("\n" + "=" * 80)
     print("HITL TEST FINISHED")

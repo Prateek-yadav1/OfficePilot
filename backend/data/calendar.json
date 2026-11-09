@@ -1,14 +1,28 @@
 [
   {
-  "client": "ABC Technologies",
-  "title": "ABC Technologies Meeting",
-  "date": "2026-09-19",
-  "time": "11:00",
-  "participants": [
-    "Rahul",
-    "Priya",
-    "ABC CTO",
-    "ABC Product Manager"
-  ]
-}
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
+    "client": "ABC Technologies",
+    "title": "ABC Technologies Meeting",
+    "date": "2026-10-31",
+    "time": "11:00",
+    "participants": [
+      "Rahul",
+      "Priya",
+      "ABC CTO",
+      "ABC Product Manager"
+    ]
+  },
+  {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
+    "client": "XYZ Solutions",
+    "title": "XYZ Solutions Pricing Review",
+    "date": "2026-11-02",
+    "time": "14:00",
+    "participants": [
+      "XYZ Account Lead",
+      "OfficePilot Account Manager"
+    ]
+  }
 ]

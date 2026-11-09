@@ -1,10 +1,12 @@
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 from google.adk.agents import Agent
 from google.adk.tools import FunctionTool
+from google.adk.tools import ToolContext
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -18,12 +20,31 @@ MCP_SERVER = PROJECT_ROOT / "backend" / "tools" / "mcp_server.py"
 async def execute_followup_task_via_mcp(
     client: str,
     task_details: str,
+    tenant_id: str | None = None,
+    user_id: str | None = None,
+    tool_context: ToolContext | None = None,
 ) -> dict:
     """Execute the follow-up task through the OfficePilot MCP server."""
+
+    trusted_tenant_id = (
+        tool_context.state.get("tenant_id")
+        if tool_context is not None
+        else tenant_id
+    )
+    trusted_user_id = (
+        tool_context.state.get("user_id")
+        if tool_context is not None
+        else user_id
+    )
+    if not isinstance(trusted_tenant_id, str) or not trusted_tenant_id.strip():
+        raise PermissionError("The workflow has no authenticated tenant context.")
+    if not isinstance(trusted_user_id, str) or not trusted_user_id.strip():
+        raise PermissionError("The workflow has no authenticated user context.")
 
     server_params = StdioServerParameters(
         command=sys.executable,
         args=[str(MCP_SERVER)],
+        env=os.environ.copy(),
     )
 
     async with stdio_client(server_params) as (read_stream, write_stream):
@@ -34,6 +55,8 @@ async def execute_followup_task_via_mcp(
                 {
                     "client": client,
                     "task_details": task_details,
+                    "tenant_id": trusted_tenant_id,
+                    "user_id": trusted_user_id,
                 },
             )
 

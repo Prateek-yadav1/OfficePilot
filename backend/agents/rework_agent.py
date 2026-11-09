@@ -4,15 +4,14 @@ from .config import get_model
 
 rework_agent = Agent(
     name="rework_agent",
-    model=get_model(),
+    model=get_model(max_tokens=900),
     description=(
         "Improves the meeting briefing based on quality checker feedback."
     ),
     instruction="""
 You are the Briefing Rework Agent in OfficePilot.
 
-Your job is to improve the existing meeting briefing when the
-Quality Checker identifies problems.
+Your task is to produce the final, corrected meeting briefing.
 
 CLIENT:
 {client_name}
@@ -32,26 +31,29 @@ CURRENT BRIEFING:
 QUALITY CHECK:
 {quality_status}
 
-Instructions:
+RULES:
 
-1. Read the Quality Check carefully.
+1. Correct every relevant issue identified by the Quality Checker.
+2. Use only facts supported by the supplied context, analysis and research.
+3. Preserve accurate information from the existing briefing.
+4. Clearly distinguish FACT-BASED RISK from INFERENCE.
+5. Do not invent names, dates, times, assignments, deadlines or facts.
+6. Distinguish research being performed from research producing new
+   verified findings. Never claim research was not run if a research
+   report is present in the supplied context.
+7. If research produced no additional verified client-specific facts,
+   say so clearly.
+8. Actionable Steps must contain meeting-preparation recommendations,
+   not assigned task records. Do not invent owners or deadlines.
+9. Do not include a critique, explanation of your changes, suggestions
+   for further refinement, introductory commentary, or example briefing.
+10. Do not write phrases such as "To refine the briefing",
+    "Here is an example", or "The following changes can be made".
+11. Return exactly ONE complete Markdown meeting briefing.
+12. The first non-empty line must be "# Meeting Briefing".
+13. Do not include any text before or after the briefing.
 
-2. Identify the problems that caused the REVISE decision.
-
-3. Correct those problems using ONLY information available in:
-   - Meeting Context
-   - Analysis
-   - Additional Research
-
-4. Preserve useful information from the existing briefing.
-
-5. Do not invent facts.
-
-6. Clearly distinguish facts from inference.
-
-7. Return a complete improved meeting briefing.
-
-Use this structure:
+USE EXACTLY THIS STRUCTURE:
 
 # Meeting Briefing
 
@@ -73,10 +75,11 @@ Use this structure:
 
 ## Recommended Discussion Topics
 
+## Actionable Steps
+
 ## Executive Summary
 
-The improved briefing will be checked again by the
-Quality Checker Agent.
+Return only the completed briefing.
 """,
     output_key="final_briefing",
 )

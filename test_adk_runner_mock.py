@@ -1,5 +1,6 @@
 
 import asyncio
+import importlib
 from unittest.mock import AsyncMock, patch
 
 from google.adk.apps import App
@@ -7,6 +8,10 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from backend.agents.research_agent import research_agent
+
+research_agent_module = importlib.import_module(
+    "backend.agents.research_agent"
+)
 
 
 async def main():
@@ -43,12 +48,22 @@ async def main():
 
     mock_crew = type("MockCrew", (), {})()
     mock_crew.kickoff_async = AsyncMock(return_value=mock_result)
+    a2a_reviews = []
+    original_a2a_review = research_agent_module._review_with_a2a
+
+    async def capture_a2a_review(report):
+        response = await original_a2a_review(report)
+        a2a_reviews.append((report, response))
+        return response
 
     print("\nStarting ADK runner with mocked CrewAI...")
 
     with patch(
-        "backend.agents.research_agent.research_crew",
-        mock_crew,
+        "backend.agents.research_agent.create_research_crew",
+        return_value=mock_crew,
+    ), patch(
+        "backend.agents.research_agent._review_with_a2a",
+        side_effect=capture_a2a_review,
     ):
         async for event in runner.run_async(
             user_id=user_id,
@@ -76,9 +91,19 @@ async def main():
             "ADK did not call the mocked CrewAI research function. "
             "Check whether the agent selected the research tool."
         )
+    if not a2a_reviews:
+        raise AssertionError(
+            "The research result was not sent to the remote A2A reviewer."
+        )
+    if "not independently verified" not in a2a_reviews[0][1].lower():
+        raise AssertionError(
+            "The A2A reviewer did not return its source-verification warning."
+        )
 
     print("\nPASS: ADK runner completed its event loop.")
     print("PASS: The mocked CrewAI research function was called.")
+    print("PASS: The research result was reviewed over A2A.")
+    print("PASS: The A2A reviewer made no source-verification claim.")
     print("PASS: No real CrewAI LLM request was made.")
 
     print("\n" + "=" * 70)

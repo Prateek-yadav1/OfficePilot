@@ -7,6 +7,7 @@ not an external office/task-management integration.
 """
 
 import asyncio
+import os
 from datetime import date, timedelta
 from typing import Any
 
@@ -87,6 +88,8 @@ async def approved_offline_mcp_action(
         result = await execute_followup_task_via_mcp(
             client=client,
             task_details=task_details,
+            tenant_id=os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", ""),
+            user_id=os.getenv("OFFICEPILOT_LOCAL_USER_ID", ""),
         )
         # Preserve the actual result from the MCP client. Do not manufacture a
         # success response if the MCP function raises or returns an error.
@@ -144,7 +147,14 @@ class ScriptedModel(BaseLlm):
 
 def script_agent(agent, *steps: Any) -> None:
     """Replace this agent's LLM with local scripted output for this test."""
-    agent.model = ScriptedModel(label=agent.name, steps=list(steps))
+    if not hasattr(agent, "model"):
+        return
+
+    try:
+        agent.model = ScriptedModel(label=agent.name, steps=list(steps))
+    except ValueError:
+        # Some agents are deterministic workflow steps without an LLM model.
+        return
 
 
 def configure_offline_models() -> None:
@@ -190,10 +200,18 @@ def configure_offline_models() -> None:
 
     script_agent(
         aggregator_agent,
-        "Meeting context: emails identify ERP integration and previous "
-        "deployment-delay concerns. Retrieved documents request clearer "
-        "milestone tracking. The calendar contains a past meeting record, "
-        "not a confirmed meeting for tomorrow.",
+        '{'
+        '"client": "ABC Technologies", '
+        '"important_communication": ["An email dated 2026-09-05 requests ERP integration in Phase 2.", "The client expressed concern about the previous deployment delay."], '
+        '"client_concerns": ["The client expressed concern about the previous deployment delay.", "Previous meeting notes request clearer deployment milestones."], '
+        '"relevant_documents": ["Meeting notes on deployment milestones and ERP integration.", "Contract renewal planning materials."], '
+        '"important_document_facts": ["The proposal covers ERP integration and deployment improvements.", "Previous meeting notes request clearer deployment milestones.", "The contract renews in December 2026."], '
+        '"meeting_title": "Not found in available sources", '
+        '"meeting_date": "Not found in available sources", '
+        '"meeting_time": "Not found in available sources", '
+        '"participants": [], '
+        '"missing_information": ["The next meeting date is not confirmed in the available calendar data.", "Deployment milestones and ownership need clarification."]'
+        '}',
     )
 
     script_agent(
@@ -262,6 +280,10 @@ Confirm the next meeting date and time.
 - Deployment milestones, owners and dates.
 - Previous deployment concerns and dependency tracking.
 
+## Actionable Steps
+- Confirm the next meeting date and time.
+- Assign owners to the deployment milestones.
+
 ## Executive Summary
 Focus on ERP integration and a more transparent deployment plan. Confirm the
 next meeting date because the available calendar entry is historical.
@@ -316,6 +338,10 @@ Confirm the next meeting date and time.
 - Phase 2 ERP integration.
 - Deployment milestones, ownership and dates.
 - Previous deployment concerns.
+
+## Actionable Steps
+- Confirm the next meeting date and time.
+- Assign owners to deployment milestones and required testing.
 
 ## Executive Summary
 Confirm the next meeting date and agree on clear deployment milestones,
@@ -403,6 +429,16 @@ async def main() -> None:
 
     session_service = InMemorySessionService()
     user_id = "officepilot_demo_user"
+    tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
+    authenticated_user_id = os.getenv(
+        "OFFICEPILOT_LOCAL_USER_ID",
+        user_id,
+    ).strip()
+    if not tenant_id or not authenticated_user_id:
+        raise RuntimeError(
+            "Set OFFICEPILOT_LOCAL_TENANT_ID and "
+            "OFFICEPILOT_LOCAL_USER_ID before running."
+        )
     session_id = "officepilot_demo_session"
 
     runner = Runner(app=offline_app, session_service=session_service)
@@ -411,7 +447,11 @@ async def main() -> None:
         user_id=user_id,
         session_id=session_id,
         state={
+            "user_id": authenticated_user_id,
+            "tenant_id": tenant_id,
+            "original_request": f"Prepare the next meeting with {CLIENT}.",
             "client_name": CLIENT,
+            "original_request": f"Prepare me for a meeting with {CLIENT}.",
             "information_status": (
                 "MISSING: upcoming meeting date is not confirmed; "
                 "verify deployment milestones."

@@ -1,0 +1,10 @@
+{
+  "client": "ABC Technologies",
+  "provider": "ollama",
+  "runtime_seconds": 14.5,
+  "email_records": 2,
+  "calendar_records": 1,
+  "document_records": 3,
+  "estimated_cost_usd": 0.0,
+  "notes": "This benchmark reflects the local data-access flow; billed cloud models would add API cost."
+}

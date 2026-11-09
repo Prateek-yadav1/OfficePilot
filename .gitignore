@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+secrets.*
+
+# Google OAuth credentials and user tokens
+credentials.json
+client_secret*.json
+token.json
+google_token.json
+oauth_token.json
+*.token
+
+# Local databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Logs and generated reports
+*.log
+logs/
+coverage.xml
+htmlcov/
+
+# Local model/cache files
+.ollama/
+.cache/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Additional exclusions for ADK deployment source staging
+.git
+.git/
+Credentials.json
+credentials.json
+token.json
+google_token.json
+oauth_token.json
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+*.pyc
+*.bak

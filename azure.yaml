@@ -1,0 +1,8 @@
+name: officepilot
+metadata:
+  template: officepilot@0.0.1
+services:
+  officepilot:
+    project: .
+    host: containerapp
+    language: python

@@ -1,12 +1,14 @@
 from google.adk.agents import Agent
 
 from .config import get_model
+from .schemas import MeetingContext
 
 
 aggregator_agent = Agent(
     name="context_aggregator",
 
-    model=get_model(),
+    model=get_model(max_tokens=700),
+    output_schema=MeetingContext,
 
     description=(
         "Combines results produced by the parallel "
@@ -17,6 +19,13 @@ aggregator_agent = Agent(
 You are the Context Aggregator Agent.
 
 Combine the results from the three research agents.
+
+CLIENT NAME FROM WORKFLOW STATE:
+{client_name}
+
+Use this exact client name for the client field. Do not claim the
+client identity is missing when this value is available. Do not
+infer a different client name from the other sources.
 
 EMAIL CONTEXT:
 {email_context}

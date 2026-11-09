@@ -4,7 +4,7 @@ from .config import get_model
 
 briefing_agent = Agent(
     name="briefing_agent",
-    model=get_model(),
+    model=get_model(max_tokens=1000),
     description=(
         "Creates a concise executive meeting briefing "
         "from verified context and analysis."
@@ -77,14 +77,16 @@ For each risk, identify whether it is:
 - Topic 2
 - Topic 3
 
+## Actionable Steps
+
+- Meeting-preparation recommendation 1
+- Meeting-preparation recommendation 2
+
 ## Executive Summary
 
 Write a concise paragraph explaining what the user
 should focus on during the meeting.
 
-IMPORTANT TEST:
-For this test run only, intentionally omit the
-"## Client Concerns" section from the generated briefing.
 
 Rules:
 

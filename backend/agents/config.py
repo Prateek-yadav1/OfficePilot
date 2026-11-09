@@ -1,67 +1,27 @@
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
 from google.adk.models.lite_llm import LiteLlm
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = PROJECT_ROOT / ".env"
-
-load_dotenv(ENV_FILE)
+from backend.llm_config import get_llm_provider_settings
 
 
-def get_model() -> LiteLlm:
-    """
-    Return the configured LLM.
+def get_model(max_tokens: int = 1200) -> LiteLlm:
+    """Return the ADK model selected by the shared GROQ/OLLAMA setting."""
+    settings = get_llm_provider_settings("adk")
 
-    Default: local Ollama with Llama 3.1.
-    Optional: OpenRouter by setting LLM_PROVIDER=openrouter.
-    """
-
-    provider = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
-
-    if provider in {"ollama", "local"}:
-        model_name = os.getenv("OLLAMA_MODEL", "llama3.1").strip()
-        api_base = os.getenv(
-            "OLLAMA_API_BASE",
-            "http://127.0.0.1:11434",
-        ).rstrip("/")
-
-        # LiteLLM uses this environment variable for Ollama API calls.
-        os.environ["OLLAMA_API_BASE"] = api_base
-
-        # Accept either "llama3.1" or the full LiteLLM model identifier.
+    if settings.provider == "ollama":
+        model_name = settings.model
+        os.environ["OLLAMA_API_BASE"] = settings.api_base or ""
         if not model_name.startswith("ollama_chat/"):
             model_name = f"ollama_chat/{model_name}"
+    else:
+        model_name = f"groq/{settings.model}"
 
-        return LiteLlm(
-            model=model_name,
-            api_base=api_base,
-            max_tokens=1200,
-        )
-
-    if provider == "openrouter":
-        api_key = os.getenv("OPENROUTER_API_KEY")
-
-        if not api_key:
-            raise RuntimeError(
-                "LLM_PROVIDER is set to openrouter, but "
-                "OPENROUTER_API_KEY is missing from the environment."
-            )
-
-        model_name = os.getenv(
-            "LLM_MODEL",
-            "openrouter/google/gemini-2.5-flash",
-        )
-
-        return LiteLlm(
-            model=model_name,
-            api_key=api_key,
-            max_tokens=1200,
-        )
-
-    raise ValueError(
-        f"Unsupported LLM_PROVIDER: {provider!r}. "
-        "Use 'ollama' or 'openrouter'."
+    return LiteLlm(
+        model=model_name,
+        api_base=settings.api_base,
+        api_key=settings.api_key,
+        max_tokens=max_tokens,
+        timeout=180,
+        num_retries=0,
     )

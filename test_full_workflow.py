@@ -11,6 +11,7 @@ invocation. The production action_executor.py is not modified.
 
 import asyncio
 import os
+import time
 import uuid
 from datetime import date, timedelta
 from pathlib import Path
@@ -24,7 +25,6 @@ load_dotenv(PROJECT_ROOT / ".env")
 # Force local models for this test before importing agents (their model objects
 # are constructed during import). This prevents accidental OpenRouter calls.
 os.environ["LLM_PROVIDER"] = "ollama"
-os.environ["CREWAI_LLM_PROVIDER"] = "ollama"
 os.environ.setdefault("OLLAMA_API_BASE", "http://127.0.0.1:11434")
 os.environ.setdefault(
     "OLLAMA_OPENAI_BASE_URL",
@@ -83,6 +83,8 @@ async def approved_local_mcp_action(client: str, task_details: str) -> dict[str,
         ACTUAL_MCP_RESULT = await execute_followup_task_via_mcp(
             client=client,
             task_details=task_details,
+            tenant_id=os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", ""),
+            user_id=os.getenv("OFFICEPILOT_LOCAL_USER_ID", ""),
         )
     except Exception as exc:  # Keep failures explicit; never report false success.
         ACTUAL_MCP_RESULT = {
@@ -121,6 +123,13 @@ async def main() -> None:
     # The production action_executor.py remains unchanged.
     action_executor_agent.tools = [FunctionTool(func=approved_local_mcp_action)]
 
+        # Rebuild the workflow after replacing the action executor tool.
+    local_workflow = Workflow(
+        name="officepilot_local_llm_workflow",
+        description=root_agent.description,
+        edges=root_agent.edges,
+    )
+
     print("\n" + "=" * 78)
     print("OFFICEPILOT — FULL WORKFLOW WITH LOCAL LLAMA 3.1")
     print("=" * 78)
@@ -128,21 +137,30 @@ async def main() -> None:
     print(f"Today: {TODAY} | Requested meeting date: {TOMORROW}")
     print("ADK model: Ollama / Llama 3.1")
     print("CrewAI model: Ollama / Llama 3.1")
-    print("OpenRouter calls: disabled for this test")
+    print("Groq calls: disabled for this test")
     print("Email/calendar/document data and MCP action service: local components")
     print("CrewAI research data source: local mock research fixture")
     print("Agent responses: generated live by local LLMs (not scripted)")
 
     session_service = InMemorySessionService()
     user_id = "officepilot_local_user"
+    tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
+    if not tenant_id:
+        raise RuntimeError("Set OFFICEPILOT_LOCAL_TENANT_ID before running.")
     session_id = str(uuid.uuid4())
-    app_name = root_agent.name
+    app_name = local_workflow.name
 
     await session_service.create_session(
         app_name=app_name,
         user_id=user_id,
         session_id=session_id,
         state={
+            "user_id": os.getenv(
+                "OFFICEPILOT_LOCAL_USER_ID",
+                user_id,
+            ),
+            "tenant_id": tenant_id,
+            "original_request": f"Prepare me for tomorrow's meeting with {CLIENT}.",
             "client_name": CLIENT,
             "information_status": (
                 "Check whether the next meeting is confirmed and identify "
@@ -152,10 +170,10 @@ async def main() -> None:
     )
 
     runner = Runner(
-        agent=root_agent,
+        agent=local_workflow,
         app_name=app_name,
         session_service=session_service,
-    )
+)
 
     user_message = types.Content(
         role="user",
@@ -173,13 +191,76 @@ async def main() -> None:
         ],
     )
 
-    print("\nSTARTING WORKFLOW…")
+    # Benchmark wall-clock workflow execution, including human approval wait.
+    benchmark_started = time.perf_counter()
+    metrics = {
+        "events": 0,
+        "model_responses": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "tool_calls": 0,
+        "tool_responses": 0,
+        "errors": 0,
+    }
+
+    print("\\nSTARTING WORKFLOW…")
     async for event in runner.run_async(
         user_id=user_id,
         session_id=session_id,
         new_message=user_message,
     ):
+        metrics["events"] += 1
+
+        usage = getattr(event, "usage_metadata", None)
+        if usage is not None:
+            metrics["model_responses"] += 1
+            metrics["prompt_tokens"] += int(
+                getattr(usage, "prompt_token_count", 0) or 0
+            )
+            metrics["output_tokens"] += int(
+                getattr(usage, "candidates_token_count", 0) or 0
+            )
+            metrics["total_tokens"] += int(
+                getattr(usage, "total_token_count", 0) or 0
+            )
+
+        if getattr(event, "error_code", None):
+            metrics["errors"] += 1
+
+        content = getattr(event, "content", None)
+        for part in getattr(content, "parts", []) or []:
+            if getattr(part, "function_call", None):
+                metrics["tool_calls"] += 1
+            if getattr(part, "function_response", None):
+                metrics["tool_responses"] += 1
+
         show_event(event)
+
+    benchmark_elapsed = time.perf_counter() - benchmark_started
+
+    print("\\n" + "=" * 78)
+    print("OFFICEPILOT PERFORMANCE BENCHMARK")
+    print("=" * 78)
+    print(f"End-to-end wall time: {benchmark_elapsed:.2f} seconds")
+    print("Note: wall time includes time spent waiting for human approval.")
+    print(f"ADK events observed: {metrics['events']}")
+    print(f"ADK model responses with usage data: {metrics['model_responses']}")
+    print(f"ADK prompt tokens observed: {metrics['prompt_tokens']}")
+    print(f"ADK output tokens observed: {metrics['output_tokens']}")
+    print(f"ADK total tokens observed: {metrics['total_tokens']}")
+    print(f"Tool calls observed: {metrics['tool_calls']}")
+    print(f"Tool responses observed: {metrics['tool_responses']}")
+    print(f"Error events observed: {metrics['errors']}")
+    print(
+        "Estimated hosted-model API charges: $0.00 for this test's "
+        "configured local Ollama models; hardware and electricity excluded."
+    )
+    print(
+        "Caveat: CrewAI sub-crew token usage may not be included unless "
+        "it is separately instrumented."
+    )
+    print("=" * 78)
 
     session = await session_service.get_session(
         app_name=app_name,

@@ -4,7 +4,7 @@ from .config import get_model
 
 quality_checker = Agent(
     name="quality_checker",
-    model=get_model(),
+    model=get_model(max_tokens=128),
     description=(
         "Critically reviews the generated meeting briefing "
         "for completeness, accuracy, formatting, consistency, "

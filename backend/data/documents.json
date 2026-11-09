@@ -1,20 +1,37 @@
 [
   {
+    "tenant_id": "local-demo",
     "client": "ABC Technologies",
     "title": "ABC Phase 2 Proposal",
     "type": "proposal",
     "content": "Phase 2 includes ERP integration and deployment improvements."
   },
   {
+    "tenant_id": "local-demo",
     "client": "ABC Technologies",
     "title": "ABC Contract",
     "type": "contract",
     "content": "The current enterprise contract is scheduled for renewal in December 2026."
   },
   {
+    "tenant_id": "local-demo",
     "client": "ABC Technologies",
     "title": "Previous Meeting Notes",
     "type": "meeting_notes",
     "content": "The client requested clearer deployment milestones."
+  },
+  {
+    "tenant_id": "local-demo",
+    "client": "XYZ Solutions",
+    "title": "XYZ Enterprise Pricing Proposal",
+    "type": "proposal",
+    "content": "SYNTHETIC TEST DATA: XYZ Solutions requested an updated enterprise pricing proposal by email dated 2026-09-04. Final pricing, scope, and commercial terms must be confirmed."
+  },
+  {
+    "tenant_id": "local-demo",
+    "client": "XYZ Solutions",
+    "title": "XYZ Pricing Review Notes",
+    "type": "meeting_notes",
+    "content": "SYNTHETIC TEST DATA: The pricing review should cover the updated enterprise proposal, package scope, and commercial terms. These are sample discussion topics, not verified client instructions."
   }
 ]

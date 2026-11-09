@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from backend.tools.document_retriever import retrieve_documents
 from backend.agents.action_executor import execute_followup_task_via_mcp
@@ -6,6 +7,13 @@ from backend.agents.action_executor import execute_followup_task_via_mcp
 
 async def main():
     client = "ABC Technologies"
+    tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
+    user_id = os.getenv("OFFICEPILOT_LOCAL_USER_ID", "").strip()
+    if not tenant_id or not user_id:
+        raise RuntimeError(
+            "Set OFFICEPILOT_LOCAL_TENANT_ID and "
+            "OFFICEPILOT_LOCAL_USER_ID before the demo."
+        )
 
     print("\n" + "=" * 65)
     print("OFFICEPILOT - LOCAL INTEGRATION DEMO")
@@ -17,6 +25,7 @@ async def main():
     documents = retrieve_documents(
         query="What did the client ask us to improve?",
         client=client,
+        tenant_id=tenant_id,
         limit=3,
     )
 
@@ -52,6 +61,8 @@ async def main():
     result = await execute_followup_task_via_mcp(
         client=client,
         task_details=task_details,
+        tenant_id=tenant_id,
+        user_id=user_id,
     )
 
     print("\nMCP result:")

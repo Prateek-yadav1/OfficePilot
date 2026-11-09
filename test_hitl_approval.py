@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from google.adk.tools import FunctionTool
 from google.genai import types
@@ -22,6 +23,12 @@ async def main():
     print("=" * 80)
 
     client = "ABC Technologies"
+    tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
+    user_id = os.getenv("OFFICEPILOT_LOCAL_USER_ID", "").strip()
+    if not tenant_id or not user_id:
+        raise RuntimeError(
+            "Set OFFICEPILOT_LOCAL_TENANT_ID and OFFICEPILOT_LOCAL_USER_ID."
+        )
 
     task_details = (
         "Follow up on deployment milestones and previous "
@@ -56,9 +63,11 @@ async def main():
         print("-" * 80)
 
         result = await execute_followup_task_via_mcp(
-    client=client,
-    task_details=task_details,
-)
+            client=client,
+            task_details=task_details,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
 
         print("\nTool execution result:")
         print(result)

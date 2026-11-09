@@ -1,17 +1,23 @@
 [
   {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
     "client": "ABC Technologies",
     "subject": "ERP Integration Requirements",
     "date": "2026-09-05",
     "content": "ABC wants ERP integration completed in Phase 2."
   },
   {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
     "client": "ABC Technologies",
     "subject": "Deployment Delay Concern",
     "date": "2026-09-02",
     "content": "The client expressed concern regarding the previous deployment delay."
   },
   {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
     "client": "XYZ Solutions",
     "subject": "Pricing Discussion",
     "date": "2026-09-04",

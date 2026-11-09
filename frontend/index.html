@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f6f2">
+    <meta
+      name="description"
+      content="Walk into every client meeting prepared with an AI-powered briefing."
+    >
+    <title>OfficePilot — Meeting briefings, made clear</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="OfficePilot home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M7 23.5 14.5 8l3.2 7.1 2.4-4.8L27 23.5H7Z" />
+              <path d="M12.1 19.2h9.5" />
+            </svg>
+          </span>
+          <span class="brand-name">officepilot<span>.</span></span>
+        </a>
+        <div class="topbar-note">
+          <span class="topbar-dot" aria-hidden="true"></span>
+          YOUR MEETING BRIEFING DESK
+        </div>
+        <a class="topbar-link" href="#how-it-works">
+          How it works
+          <span aria-hidden="true">↗</span>
+        </a>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow"><span>01</span> PREPARED, NOT JUST PRESENT</p>
+            <h1 id="hero-title">
+              Walk in with<br>
+              <span>the full picture.</span>
+            </h1>
+            <p class="hero-description">
+              OfficePilot brings your meeting context together, so you can
+              spend less time searching and more time having a great
+              conversation.
+            </p>
+            <div class="hero-proof">
+              <span class="proof-icon" aria-hidden="true">✳</span>
+              Built around your next conversation
+            </div>
+          </div>
+
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="orbit orbit-three"></div>
+            <div class="art-sun"></div>
+            <div class="art-card art-card-back">
+              <span class="art-card-label">CONTEXT</span>
+              <span class="art-lines"><i></i><i></i><i></i></span>
+            </div>
+            <div class="art-card art-card-front">
+              <span class="art-card-label">YOUR BRIEF</span>
+              <span class="art-check">✓</span>
+              <span class="art-lines"><i></i><i></i><i></i></span>
+            </div>
+            <span class="art-spark spark-one">✳</span>
+            <span class="art-spark spark-two">✦</span>
+          </div>
+        </section>
+
+        <section class="workspace" aria-labelledby="request-title">
+          <div class="workspace-heading">
+            <div>
+              <p class="eyebrow"><span>02</span> START WITH A CONVERSATION</p>
+              <h2 id="request-title">What are you preparing for?</h2>
+            </div>
+            <span class="workspace-tag">
+              <span class="tag-star" aria-hidden="true">✳</span>
+              YOUR PERSONAL BRIEFING
+            </span>
+          </div>
+
+          <div class="workspace-grid">
+            <form id="brief-form" class="request-card">
+              <label class="field-label" for="user-request">
+                TELL OFFICEPILOT WHAT YOU NEED
+              </label>
+              <div class="textarea-wrap">
+                <textarea
+                  id="user-request"
+                  name="user_request"
+                  maxlength="4000"
+                  rows="4"
+                  required
+                  placeholder="Prepare me for my next client meeting…"
+                  aria-describedby="request-hint request-count"
+                ></textarea>
+                <span class="input-spark" aria-hidden="true">✳</span>
+              </div>
+              <div class="request-meta">
+                <p id="request-hint">
+                  Name a client, or let OfficePilot find your next meeting.
+                </p>
+                <span id="request-count" aria-live="polite">0 / 4000</span>
+              </div>
+              <div class="suggestions" aria-label="Try an example request">
+                <span class="suggestion-label">TRY</span>
+                <button
+                  class="suggestion-chip"
+                  type="button"
+                  data-prompt="Prepare me for my next client meeting."
+                >
+                  My next client meeting <span aria-hidden="true">↗</span>
+                </button>
+                <button
+                  class="suggestion-chip"
+                  type="button"
+                  data-prompt="Prepare me for my next meeting with the client I name."
+                >
+                  A named client <span aria-hidden="true">↗</span>
+                </button>
+              </div>
+              <div class="form-footer">
+                <p class="privacy-note">
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2m-8 0h9v7h-9V7Z" />
+                    <path d="M8 9.5v2" />
+                  </svg>
+                  Your briefing may include private workspace information.
+                </p>
+                <button id="submit-button" class="submit-button" type="submit">
+                  <span class="button-label">Create my briefing</span>
+                  <span class="button-arrow" aria-hidden="true">↗</span>
+                </button>
+              </div>
+              <p id="form-error" class="form-error" role="alert" hidden></p>
+            </form>
+
+            <aside id="how-it-works" class="side-card">
+              <div class="side-card-top">
+                <span class="side-card-icon" aria-hidden="true">✳</span>
+                <span class="side-card-kicker">A LITTLE LESS LAST-MINUTE</span>
+              </div>
+              <h3>From scattered context to a clear point of view.</h3>
+              <ol class="steps-list">
+                <li>
+                  <span class="step-number">01</span>
+                  <span><strong>Find the meeting</strong><small>Identify the next conversation on your calendar.</small></span>
+                </li>
+                <li>
+                  <span class="step-number">02</span>
+                  <span><strong>Bring context together</strong><small>Search for relevant email and client documents.</small></span>
+                </li>
+                <li>
+                  <span class="step-number">03</span>
+                  <span><strong>Get your bearings</strong><small>Review a concise brief, open questions, and useful topics.</small></span>
+                </li>
+              </ol>
+              <div class="side-card-foot">
+                <span class="foot-orbit" aria-hidden="true">◎</span>
+                <span>Grounded in the sources available to your workspace.</span>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="result-section" class="result-section" aria-live="polite" hidden>
+          <div class="result-heading">
+            <div>
+              <p class="eyebrow"><span>03</span> YOUR PREPARATION</p>
+              <h2 id="result-title">Your briefing</h2>
+            </div>
+            <span id="result-time" class="result-time"></span>
+          </div>
+          <div class="result-card">
+            <div class="result-card-top">
+              <div class="result-status">
+                <span class="result-status-dot" aria-hidden="true"></span>
+                <span id="result-status-label">BRIEFING READY</span>
+              </div>
+              <button id="copy-button" class="copy-button" type="button">
+                <span aria-hidden="true">▢</span> Copy brief
+              </button>
+            </div>
+            <section id="briefing-metadata" class="briefing-metadata" aria-label="Meeting and source details">
+              <div class="metadata-block">
+                <h3>Client and meeting</h3>
+                <p id="briefing-client">Not identified</p>
+                <p id="client-match-evidence"></p>
+                <p id="briefing-meeting">Meeting details were not available.</p>
+              </div>
+              <div class="metadata-block">
+                <h3>Missing information and uncertainty</h3>
+                <ul id="missing-information"></ul>
+              </div>
+              <div class="metadata-block">
+                <h3>Sources</h3>
+                <ul id="source-references"></ul>
+              </div>
+              <div class="metadata-block">
+                <h3>Integration status</h3>
+                <ul id="integration-status"></ul>
+              </div>
+              <div id="partial-results-block" class="metadata-block partial-results-block" hidden>
+                <h3>Partial results saved before failure</h3>
+                <div id="partial-results"></div>
+              </div>
+              <p id="execution-warning" class="execution-warning" hidden></p>
+              <p id="execution-ids" class="execution-ids"></p>
+            </section>
+            <div id="brief-output" class="brief-output"></div>
+          </div>
+        </section>
+
+        <div id="loading-panel" class="loading-panel" role="status" hidden>
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <span>
+            <strong>Gathering the pieces.</strong>
+            <small id="loading-message">OfficePilot is preparing your briefing.</small>
+          </span>
+          <ol id="progress-events" class="progress-events" aria-live="polite"></ol>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <a class="footer-brand" href="/">officepilot<span>.</span></a>
+        <span>Make room for the conversation.</span>
+        <span class="footer-mark" aria-hidden="true">✳</span>
+      </footer>
+    </div>
+  </body>
+</html>

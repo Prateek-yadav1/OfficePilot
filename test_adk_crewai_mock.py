@@ -24,36 +24,51 @@ async def main():
     # Create a simple mock object instead of modifying CrewAI's Crew instance.
     mock_crew = type("MockCrew", (), {})()
     mock_crew.kickoff_async = AsyncMock(return_value=mock_result)
+    mock_a2a_review = AsyncMock(
+        return_value=(
+            "A2A reviewer received the submitted research context. "
+            "No factual claims were independently verified."
+        )
+    )
 
     print("\nStarting mocked research call...")
 
-    with patch(
-        "backend.agents.research_agent.research_crew",
-        mock_crew,
+    with (
+        patch(
+            "backend.agents.research_agent.create_research_crew",
+            return_value=mock_crew,
+        ),
+        patch(
+            "backend.agents.research_agent._review_with_a2a",
+            mock_a2a_review,
+        ),
     ):
         result = await run_crewai_research(
             client=client,
             missing_information=missing_information,
         )
 
-    # Verify the returned result.
-    assert result == mock_result, (
-        f"Unexpected result: {result}"
-    )
+    assert f"CrewAI research report:\n{mock_result}" in result
+    assert "No factual claims were independently verified." in result
 
     # Verify that the mock received the expected inputs.
     mock_crew.kickoff_async.assert_awaited_once_with(
         inputs={
             "client": client,
             "missing_information": missing_information,
+            "retrieved_context": (
+                "No tenant-scoped retrieval context was available."
+            ),
         }
     )
+    mock_a2a_review.assert_awaited_once()
 
     print("\nMock research result:")
     print(result)
 
-    print("\nPASS: Research function returned the expected result.")
+    print("\nPASS: Research function returned the CrewAI and A2A results.")
     print("PASS: CrewAI received the expected inputs.")
+    print("PASS: The A2A review was invoked and returned the verification warning.")
     print("PASS: The external LLM was not called.")
 
     print("\n" + "=" * 70)

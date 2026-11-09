@@ -23,7 +23,8 @@ analyst_agent = Agent(
 
     llm=llm,
 
-    verbose=True,
+    verbose=False,
 
     allow_delegation=False,
+    max_iter=1,
 )

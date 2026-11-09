@@ -1,0 +1,10 @@
+{
+  "ABC Technologies": {
+    "deployment_delay": "The previous deployment delay was associated with integration testing and dependency issues.",
+    "deployment_improvements": "The proposed deployment improvements include clearer milestones, earlier testing, and dependency tracking.",
+    "deployment_milestones": "The client expects milestone-based deployment tracking with clear ownership and dates.",
+    "meeting_agenda": "The meeting agenda includes Phase 2 progress, ERP integration planning, deployment improvements, and resolution of previous deployment concerns.",
+    "cto": "The ABC Technologies CTO is responsible for technical strategy and ERP integration decisions.",
+    "product_manager": "The ABC Technologies Product Manager is responsible for product requirements and Phase 2 coordination."
+  }
+}
