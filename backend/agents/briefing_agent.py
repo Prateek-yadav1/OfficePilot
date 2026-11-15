@@ -4,7 +4,7 @@ from .config import get_model
 
 briefing_agent = Agent(
     name="briefing_agent",
-    model=get_model(max_tokens=1000),
+    model=get_model(max_tokens=600),
     description=(
         "Creates a concise executive meeting briefing "
         "from verified context and analysis."
@@ -58,8 +58,7 @@ Use exactly this structure:
 
 ## Additional Research
 
-- Important newly discovered information
-- If nothing new was found, state that clearly.
+- Important newly discovered information (or state none)
 
 ## Potential Risks
 
@@ -72,35 +71,32 @@ For each risk, identify whether it is:
 
 - Question 1
 - Question 2
-- Question 3
 
 ## Recommended Discussion Topics
 
 - Topic 1
 - Topic 2
-- Topic 3
 
 ## Actionable Steps
 
-- Meeting-preparation recommendation 1
-- Meeting-preparation recommendation 2
+- Recommendation 1
+- Recommendation 2
 
 ## Executive Summary
 
-Write a concise paragraph explaining what the user
-should focus on during the meeting.
+Write a concise 2-sentence paragraph explaining what the user should focus on.
 
 
 Rules:
 
+- Keep each section concise (1-2 bullets, 1 sentence per bullet). Total briefing under 250 words.
 - Use only information provided by the previous agents.
 - Never invent information.
 - Clearly distinguish facts from inference.
 - Include material project status, technical issues, pending approvals,
   decisions, timeline requirements, and action items stated in the document
   findings. Do not describe a detail as unavailable when it is present there.
-- Do not claim research was successful if the research
-  tool returned no findings.
+- Do not claim research was successful if the research tool returned no findings.
 """
     ,
     output_key="final_briefing",

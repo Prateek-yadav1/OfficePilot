@@ -8,6 +8,7 @@ safe_home.mkdir(parents=True, exist_ok=True)
 os.environ["HOME"] = str(safe_home)
 os.environ["ADK_MODEL_TIMEOUT_SECONDS"] = "180"
 os.environ["CREWAI_MODEL_TIMEOUT_SECONDS"] = "45"
+os.environ["OFFICEPILOT_WORKSPACE_MODE"] = "mock"
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -57,10 +57,15 @@ WORKSPACE_MODE = os.getenv(
     "OFFICEPILOT_WORKSPACE_MODE", "mock"
 ).strip().lower()
 
-if WORKSPACE_MODE not in {"mock", "google"}:
-    raise ValueError(
-        "OFFICEPILOT_WORKSPACE_MODE must be either 'mock' or 'google'."
-    )
+
+def _workspace_mode() -> str:
+    # Check module-level variable first so monkeypatch.setattr(mcp_server, "WORKSPACE_MODE", ...) works
+    current = globals().get("WORKSPACE_MODE")
+    if current and isinstance(current, str):
+        return current.strip().lower()
+    mode = os.getenv("OFFICEPILOT_WORKSPACE_MODE", "mock").strip().lower()
+    return mode if mode in {"mock", "google"} else "mock"
+
 
 ALLOW_GOOGLE_TASK_WRITES = (
     os.getenv("OFFICEPILOT_ALLOW_GOOGLE_TASK_WRITES", "false")
@@ -88,7 +93,7 @@ def search_emails(
 ) -> dict:
     """Search emails for a client using mock fixtures or the connected Gmail account."""
     _require_identity(user_id, tenant_id)
-    if WORKSPACE_MODE == "google":
+    if _workspace_mode() == "google":
         return google_search_emails(
             client=client,
             user_id=user_id,
@@ -114,7 +119,7 @@ def get_calendar(
 ) -> dict:
     """Find client-related Calendar events using the selected backend."""
     _require_identity(user_id, tenant_id)
-    if WORKSPACE_MODE == "google":
+    if _workspace_mode() == "google":
         return google_get_calendar(
             client=client,
             user_id=user_id,
@@ -134,7 +139,7 @@ def get_calendar(
 def discover_next_meeting(user_id: str, tenant_id: str) -> dict:
     """Find the earliest upcoming event in the selected calendar backend."""
     _require_identity(user_id, tenant_id)
-    if WORKSPACE_MODE == "google":
+    if _workspace_mode() == "google":
         result = google_discover_next_meeting(user_id=user_id)
         meeting = result.get("meeting")
         if isinstance(meeting, dict):
@@ -169,7 +174,7 @@ def create_followup_task(
 ) -> dict:
     """Create a follow-up task in the selected backend; production calls require ADK approval."""
     _require_identity(user_id, tenant_id)
-    if WORKSPACE_MODE == "google":
+    if _workspace_mode() == "google":
         if not ALLOW_GOOGLE_TASK_WRITES:
             raise PermissionError(
                 "Google Tasks writes are disabled by server policy. "

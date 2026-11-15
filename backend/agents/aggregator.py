@@ -7,7 +7,7 @@ from .schemas import MeetingContext
 aggregator_agent = Agent(
     name="context_aggregator",
 
-    model=get_model(max_tokens=700),
+    model=get_model(max_tokens=450),
     output_schema=MeetingContext,
 
     description=(
