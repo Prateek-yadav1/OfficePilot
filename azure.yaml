@@ -1,8 +1,14 @@
 name: officepilot
 metadata:
   template: officepilot@0.0.1
+infra:
+  provider: bicep
 services:
   officepilot:
     project: .
     host: containerapp
     language: python
+    docker:
+      path: ./Dockerfile
+      context: .
+      remoteBuild: true

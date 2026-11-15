@@ -1,11 +1,20 @@
 from collections.abc import AsyncGenerator
+import re
 
 from google.adk.agents import BaseAgent
 from google.adk import Event, Context
 from google.adk.agents.invocation_context import InvocationContext
 from google.genai import types
 
-from .quality_guardrails import validate_briefing_state
+from .quality_guardrails import normalize_briefing, validate_briefing_state
+
+
+_QUALITY_PASS_PATTERN = re.compile(r"^\s*(?:\*\*)?PASS(?:\*\*)?(?=\s|$)")
+
+
+def _quality_checker_passed(status: str) -> bool:
+    """Accept PASS with optional Markdown emphasis and trailing rationale."""
+    return _QUALITY_PASS_PATTERN.match(status) is not None
 
 
 
@@ -84,7 +93,11 @@ class QualityRouterAgent(BaseAgent):
         quality_status = str(
             ctx.session.state.get("quality_status", "")
         ).strip().upper()
-        decision = "PASS" if quality_status.startswith("PASS") else "REVISE"
+        decision = (
+            "PASS"
+            if _quality_checker_passed(quality_status)
+            else "REVISE"
+        )
         ctx.session.state["quality_route"] = decision
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -106,6 +119,37 @@ quality_router_agent = QualityRouterAgent(
 )
 
 
+class BriefingNormalizerAgent(BaseAgent):
+    """Canonicalize generated briefing boundaries before quality review."""
+
+    async def _run_async_impl(
+        self,
+        ctx: InvocationContext,
+    ) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        briefing = state.get("final_briefing")
+        if isinstance(briefing, str):
+            state["final_briefing"] = normalize_briefing(briefing)
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(
+                role="model",
+                parts=[types.Part(text="Briefing formatting normalized.")],
+            ),
+        )
+
+
+briefing_normalizer_agent = BriefingNormalizerAgent(
+    name="briefing_normalizer",
+    description=(
+        "Removes preamble around a valid meeting briefing heading before "
+        "the quality checker evaluates the content."
+    ),
+)
+
+
 
 MAX_QUALITY_REVIEW_CYCLES = 3
 
@@ -114,6 +158,10 @@ def quality_route_decision(ctx: Context) -> Event:
     """Require deterministic validation before action proposal."""
 
     state = ctx.state
+    briefing = state.get("final_briefing")
+    if isinstance(briefing, str):
+        state["final_briefing"] = normalize_briefing(briefing)
+
     review_cycles = int(state.get("quality_review_cycles", 0) or 0) + 1
     state["quality_review_cycles"] = review_cycles
 

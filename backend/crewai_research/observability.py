@@ -64,6 +64,7 @@ class InstrumentedCrewLLM(BaseLLM):
                     "agent_iteration": iteration,
                     "attempt": attempt + 1,
                     "timeout_seconds": self.timeout_seconds,
+                    "input_characters": len(str(messages)),
                 },
             )
             try:
@@ -92,6 +93,7 @@ class InstrumentedCrewLLM(BaseLLM):
                         "attempt": attempt + 1,
                         "duration_ms": duration_ms,
                         "error_type": error_type,
+                        "input_characters": len(str(messages)),
                     },
                 )
                 if (
@@ -124,6 +126,7 @@ class InstrumentedCrewLLM(BaseLLM):
                         (perf_counter() - started_at) * 1000,
                         2,
                     ),
+                    "output_characters": len(str(response)),
                 },
             )
             return response
@@ -150,13 +153,6 @@ class InstrumentedCrewLLM(BaseLLM):
 def _is_retryable_model_error(error_type: str) -> bool:
     retryable = {
         "apiconnectionerror",
-        "apitimeouterror",
         "connecterror",
-        "connecttimeout",
-        "ratelimiterror",
-        "readtimeout",
-        "timeout",
-        "timeouterror",
-        "timeoutexception",
     }
     return error_type.casefold() in retryable

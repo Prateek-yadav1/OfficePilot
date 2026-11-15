@@ -4,8 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
+import main as main_module
 from backend.agents.observability import validate_user_prompt
 from backend.agents.observability import OfficePilotLoggingPlugin
+from backend.agents.quality_guardrails import normalize_briefing
 from backend.tools import mcp_server
 from main import run_officepilot
 
@@ -32,6 +34,100 @@ def test_workflow_rejects_prompt_injection_before_creating_a_session():
                 tenant_id="test-tenant",
             )
         )
+
+
+def test_quality_checker_error_returns_withheld_result_with_partial_findings(
+    monkeypatch,
+):
+    session_service = SimpleNamespace(state={})
+
+    class FakeSessionService:
+        async def create_session(self, **kwargs):
+            session_service.state.update(kwargs["state"])
+
+        async def get_session(self, **kwargs):
+            return SimpleNamespace(state=session_service.state)
+
+    class FakeRunner:
+        def __init__(self, app):
+            self.session_service = FakeSessionService()
+
+        async def run_async(self, **kwargs):
+            session_service.state.update(
+                {
+                    "client_name": "Acme Robotics",
+                    "document_context": "Deployment approval is pending.",
+                }
+            )
+            yield SimpleNamespace(
+                author="quality_checker",
+                error_code="UNKNOWN_ERROR",
+                error_message="Private provider details.",
+            )
+
+    class FakePlugin:
+        def snapshot(self):
+            return {
+                "tools": [
+                    {
+                        "tool": "search_client_documents",
+                        "outcome": "success",
+                        "result_count": 1,
+                    }
+                ],
+                "sources": [],
+            }
+
+    class FakeApp:
+        def __init__(self, name, **kwargs):
+            self.name = name
+
+    monkeypatch.setattr(main_module, "App", FakeApp)
+    monkeypatch.setattr(
+        main_module,
+        "ResumabilityConfig",
+        lambda **kwargs: SimpleNamespace(**kwargs),
+    )
+    monkeypatch.setattr(main_module, "InMemoryRunner", FakeRunner)
+    monkeypatch.setattr(main_module, "OfficePilotLoggingPlugin", FakePlugin)
+
+    result = asyncio.run(
+        run_officepilot(
+            "Prepare me for a meeting with Acme Robotics.",
+            user_id="test-user",
+            tenant_id="test-tenant",
+        )
+    )
+
+    assert result.status == "failed"
+    assert "could not complete its quality review" in result.response
+    assert "Private provider details" not in result.response
+    assert (
+        result.metadata["partial_results"]["PostgreSQL / pgvector"]
+        == "Deployment approval is pending."
+    )
+    assert result.metadata["quality"]["failure"] == {
+        "stage": "quality_checker",
+        "error_code": "UNKNOWN_ERROR",
+    }
+
+
+def test_normalize_briefing_removes_only_preamble_and_code_fences():
+    generated = (
+        "Here is the requested briefing:\n\n"
+        "```markdown\n"
+        "# Meeting Briefing\n\n"
+        "## Client\nAcme Robotics\n"
+        "```\n"
+    )
+
+    assert normalize_briefing(generated) == (
+        "# Meeting Briefing\n\n"
+        "## Client\nAcme Robotics"
+    )
+    assert normalize_briefing("No required heading.") == (
+        "No required heading."
+    )
 
 
 def test_google_task_writes_remain_disabled_without_explicit_policy(

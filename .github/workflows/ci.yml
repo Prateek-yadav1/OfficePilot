@@ -1,0 +1,43 @@
+name: OfficePilot CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Test Suite
+        env:
+          HOME: /tmp/officepilot_home
+          LANGFUSE_ENABLED: "false"
+          OFFICEPILOT_WORKSPACE_MODE: "mock"
+          OFFICEPILOT_LOCAL_USER_ID: "officepilot-local-demo"
+          OFFICEPILOT_LOCAL_TENANT_ID: "local-demo"
+          OFFICEPILOT_A2A_SHARED_SECRET: "officepilot-a2a-secret-key-32charsmin!"
+          OFFICEPILOT_AUTH_USERS: '{"demo":{"password":"demopassword123456789","user_id":"officepilot-local-demo","tenant_id":"local-demo"}}'
+          LLM_PROVIDER: "ollama"
+        run: |
+          mkdir -p /tmp/officepilot_home
+          python -m pytest -q --import-mode=importlib \
+            --ignore=test_google_apis.py \
+            --ignore=test_llm_diagnostics.py \
+            -k "not (test_main_workflow_runs_crewai_and_real_a2a_branch or test_live)"

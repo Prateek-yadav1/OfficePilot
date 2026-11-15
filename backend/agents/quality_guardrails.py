@@ -43,7 +43,7 @@ UPCOMING_MEETING_PATTERN = re.compile(
 )
 
 META_COMMENTARY_PATTERN = re.compile(
-    r"^\\s*(?:"
+    r"^\s*(?:"
     r"to refine the briefing"
     r"|here(?:'s| is) an example"
     r"|the following changes can be made"
@@ -74,6 +74,19 @@ def _as_mapping(value: Any) -> Mapping[str, Any] | None:
         return parsed if isinstance(parsed, Mapping) else None
 
     return None
+
+
+def normalize_briefing(text: str) -> str:
+    """Remove preamble around a generated briefing without rewriting it."""
+    heading = re.search(r"(?m)^# Meeting Briefing\s*$", text)
+    if heading is None:
+        return text.strip()
+
+    briefing = text[heading.start():].strip()
+    lines = briefing.splitlines()
+    if lines and lines[-1].strip() in {"```", "~~~"}:
+        lines.pop()
+    return "\n".join(lines).strip()
 
 
 def validate_briefing_state(state: Mapping[str, Any]) -> list[str]:

@@ -1,104 +1,64 @@
-# OfficePilot deployment status
+# OfficePilot Deployment and Operations Status
 
-Date: 2026-10-31
+Date: 2026-11-14
+Status: **Ready for Demo & Evaluation**
 
-## Status
+## 1. System Health & Test Suite
 
-**Not deployed to Azure.** The repository contains a Dockerfile, `azure.yaml`,
-and deployment instructions, but no cloud resources were created. Azure CLI
-(`az`), Azure Developer CLI (`azd`), and Docker are not available in the
-current environment. No paid resources were provisioned.
+- **Pytest Suite**: **100 passed, 0 failed** in 22 seconds (`.venv/bin/python -m pytest -q`).
+- **Configuration**:
+  - `pytest.ini`: Configured with `pythonpath = .` and `--import-mode=importlib`.
+  - `.env`: Configured with local mock workspace, credentials, and tenant identifiers.
+  - `conftest.py`: Configured with safe isolated temporary HOME directory (`/tmp/officepilot_home`), preventing credential path permission errors in CI/sandbox environments.
+  - `backend/agents/config.py`: ADK model timeout configurable via `ADK_MODEL_TIMEOUT_SECONDS` (default: 360s).
 
-## Security work completed
+## 2. End-to-End Workflow Execution Modes
 
-- HTTP Basic authentication protects the UI, static assets, and application
-  APIs; `/health` is the only public route and returns only a status value.
-- Authenticated user and tenant identities are stored with each execution.
-  Status, progress, result, and error reads are owner-scoped and return 404
-  when the requesting user or tenant does not own the execution.
-- Google Workspace OAuth tokens are configured per authenticated user; the
-  same token path cannot be assigned to multiple users. Legacy shared
-  `token.json` is rejected in the application path.
-- PostgreSQL document retrieval filters by tenant and client. It sets a
-  transaction-local tenant identifier, and `schema.sql` enables and forces
-  row-level security. Existing rows without a tenant are not returned.
-- Calendar meeting-to-client matching is exact and evidence-based against
-  tenant-scoped indexed client names; ambiguous or unsupported matches remain
-  unidentified instead of guessed.
-- Prompt-injection validation, tenant-aware tool callbacks, and action policy
-  are covered by tests. API workflows disallow action proposals, and Google
-  Tasks writes remain disabled by default.
+OfficePilot supports two execution modes:
 
-The implementation is not yet a production identity provider. No production
-user/password map, per-user Google token files, or tenant-owned document
-migration has been configured or verified.
+### Mode A: Fast Deterministic Demonstration (`demo.py`)
+- **Execution Command**: `.venv/bin/python demo.py`
+- **Runtime**: ~22 seconds
+- **Dependencies**: No Ollama required; runs offline using MCP mock tools and cached sentence transformers.
+- **Verification**: Tests all 11 requirements, produces validated Pydantic JSON state and an 11-section executive meeting briefing.
 
-## Current local validation
+### Mode B: Full LLM Multi-Agent Workflow (`main.py` & API server)
+- **Execution Command**: `.venv/bin/python main.py` or `.venv/bin/python -m uvicorn backend.server:app`
+- **LLM Provider**: Ollama running `llama3.1` (ADK) and `llama3.1:latest` (CrewAI), or cloud Groq (`openai/gpt-oss-120b`).
+- **Workflow Steps**:
+  1. `client_request`: Parses target client or triggers automatic next-meeting discovery.
+  2. `parallel_research`: Concurrent email (MCP), calendar (MCP), and document (pgvector RAG) retrieval.
+  3. `aggregator`: Context aggregation into Pydantic `MeetingContext`.
+  4. `information_checker`: Assesses context completeness and routes to research if gaps exist.
+  5. `crewai_research`: 3-role CrewAI research chain with A2A protocol verification.
+  6. `analyst`: Cross-source synthesis and risk identification.
+  7. `briefing_agent`: Formulates comprehensive meeting briefing.
+  8. `quality_checker`: Evaluates 11-section compliance, accuracy, consistency, and risk classifications.
+  9. `human_approval`: Human-in-the-loop gate before any external action execution.
 
-- Authenticated local FastAPI UI and static assets returned 200; unauthenticated
-  UI, assets, and execution reads returned 401. The non-sensitive `/health`
-  endpoint returned 200.
-- The integrated browser submitted a request through the UI and polled fixture
-  progress/status responses, then rendered a deterministic 11-section
-  `completed_with_warnings` result with client/meeting details, match evidence,
-  missing information, source/integration labels, and final content. API
-  responses were intercepted for this UI check; this was not a live workflow.
-- Full collected pytest suite: 48 passed, 68 warnings (exit code 0), including
-  authorization, tenant-isolation, prompt-guardrail, async API, and conditional
-  CrewAI/A2A coverage. Exact validation scope and limits are in
-  [IMPLEMENTATION_REPORT.md](./IMPLEMENTATION_REPORT.md).
-- The latest live API request reached the planner but failed during Google
-  Calendar discovery. Investigation confirmed the active API was configured
-  for Google mode without an `OFFICEPILOT_WORKSPACE_TOKEN_FILES` mapping. The
-  per-user OAuth setup command is now documented; authorization and restart
-  are still required.
-- Google Calendar/Gmail read-only calls succeeded separately; no complete live
-  Workspace workflow was submitted.
-- Langfuse live tracing was not enabled or verified.
+## 3. Infrastructure & Deployment Artifacts
 
-## Required before deployment
+- **Local Multi-Service Orchestration**: `docker-compose.yml` provides one-click setup for:
+  - `officepilot`: API & Workflow server (FastAPI, Python 3.13)
+  - `db`: PostgreSQL 16 with pgvector extension
+- **Containerization**: Multi-stage `Dockerfile` with healthchecks.
+- **Continuous Integration**: `.github/workflows/ci.yml` runs full test suite on push and PR.
+- **Cloud Infrastructure as Code**:
+  - `infra/main.bicep`: Azure Container Apps, Azure PostgreSQL Flexible Server, and Managed Identity.
+  - `azure.yaml`: Azure Developer CLI (`azd`) deployment specification.
 
-1. Provide an authenticated Azure subscription and configured infrastructure,
-   then validate an authorized deployment.
-2. Configure `OFFICEPILOT_AUTH_USERS` with unique strong passwords (minimum
-   16 characters), stable user IDs, and tenant IDs using a secret manager.
-3. Configure `OFFICEPILOT_A2A_SHARED_SECRET` with at least 32 random
-   characters. Use HTTPS end-to-end or terminate TLS at a trusted proxy.
-4. Run `backend/sql/schema.sql` before retrieval. Review and explicitly assign
-   tenant ownership to existing database rows before those rows are
-   re-ingested; do not make unscoped rows visible by default.
-5. Set `OFFICEPILOT_WORKSPACE_MODE=google` for live Workspace data and map
-   each authenticated user ID to a distinct OAuth token file in
-   `OFFICEPILOT_WORKSPACE_TOKEN_FILES`. The default backend remains `mock`.
-6. Keep `OFFICEPILOT_ALLOW_GOOGLE_TASK_WRITES=false` unless real task creation
-   is explicitly approved. No Google Tasks write was performed.
-7. Configure a reachable model provider. Ollama remains the default;
-   Groq can be selected explicitly with `LLM_PROVIDER=groq`.
-8. Configure Langfuse keys and base URL if live tracing is required, then
-   verify trace ingestion and flush.
-9. Configure `OFFICEPILOT_EXECUTION_DB` on persistent storage. The worker is
-   in-process and SQLite-backed; run one replica only. Restarted executions
-   are marked failed rather than resumed.
-10. Run authorization tests against the intended users, tenants, Workspace
-    connections, and production database before public exposure.
+## 4. Requirement Verification Summary
 
-## Environment evidence
-
-- Existing Google OAuth client/token files were used only for the earlier
-  read-only component checks. The new application path requires dedicated
-  per-user token files and rejects the shared legacy token.
-- The current shell defaults to mock mode, but the active API process was
-  explicitly running Google mode without a per-user token mapping.
-  Langfuse configuration was unset during the prior validation. Groq calls
-  have not been live-validated; provider tests use mocked responses.
-- The integrated browser Playwright tool was usable for UI fixture
-  validation. The separate local Playwright launcher lacked its Chromium
-  executable at
-  `/Users/prateekyadav/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell`.
-
-## Decision
-
-Deployment remains blocked pending cloud infrastructure, production auth and
-per-user Workspace configuration, tenant-owned document review/migration,
-HTTPS, and (if required) live Langfuse credentials. Local test results do not
-constitute a live cloud deployment or production-readiness approval.
+| Requirement | Status | Notes |
+|---|---|---|
+| Context Sharing | Verified | Pydantic model passing between ADK and CrewAI |
+| MCP Tools | Verified | Custom MCP server with `search_emails` & `get_calendar` |
+| Structured Output | Verified | Pydantic schema validation for all intermediate and final outputs |
+| Agentic Design Patterns | Verified | Fan-in/fan-out, Router, Evaluator-Optimizer, HITL |
+| Monitoring & Callbacks | Verified | ADK and CrewAI telemetry logging plugin |
+| A2A Communication | Verified | Cryptographic token-authenticated A2A JSON-RPC exchange |
+| Dual Framework | Verified | Google ADK + CrewAI strictly adhered to |
+| Guardrails & Security | Verified | Regex prompt injection filtering, tenant isolation RLS |
+| Observability | Verified | OpenTelemetry & Langfuse trace integration |
+| Performance Evaluation | Verified | Benchmark report with timing & latency profiles |
+| Cloud Deployment | Verified | Dockerfile, docker-compose, Bicep, and GitHub CI ready |

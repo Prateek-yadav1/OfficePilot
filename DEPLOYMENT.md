@@ -42,20 +42,86 @@ this remote agent when it performs additional CrewAI research.
 
 ## Azure Container Apps
 
-1. Install Azure Developer CLI (`azd`) and authenticate to your subscription.
-2. Configure the required environment variables for your model and workspace mode.
-3. Ensure the Azure Developer CLI infrastructure template is present and
-   configured for the target subscription and region.
-4. Run:
+The repository now includes a Bicep template in `infra/main.bicep` and an
+`azd` parameter file. The template creates Azure Container Registry, a
+Container Apps environment, a single-replica Container App, a user-assigned
+identity for registry pulls, and Log Analytics. The app is private by default;
+external HTTPS ingress is enabled only in a separate step after image
+deployment is verified.
+
+The provided deployment is a **smoke-test foundation, not production
+deployment**. Its execution SQLite database uses container-local `/tmp`
+storage and is lost when the container is replaced. The current SQLite WAL
+store is not configured for Azure Files. Do not expose this deployment to
+users or rely on it for durable execution records until the execution store
+uses a supported durable database.
+
+1. Install Azure CLI (`az`) and Azure Developer CLI (`azd`), then authenticate
+   to an Azure subscription with permission to create the listed resources and
+   push images to Azure Container Registry.
+2. Create and select a private azd environment. Set `AZURE_SUBSCRIPTION_ID`,
+   `AZURE_LOCATION`, and the following values in that environment:
+   `OFFICEPILOT_AUTH_USERS` (valid JSON with unique strong passwords,
+   `user_id`, and `tenant_id`), `OFFICEPILOT_A2A_SHARED_SECRET` (at least 32
+   characters), `GROQ_API_KEY`, `OFFICEPILOT_EXTERNAL_INGRESS=false`,
+   `DATABASE_URL`, `LANGFUSE_ENABLED`, `LANGFUSE_PUBLIC_KEY`,
+   `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL`. Set optional database and
+   Langfuse values to empty strings when unused; set `LANGFUSE_ENABLED=false`
+   unless trace delivery is configured. Keep these values in a protected
+   local environment; `.azure/` is git-ignored. Do not put secrets in source
+   control or chat.
+   For example, after loading secret values into the local shell from a
+   protected source, pass them to azd without placing values in command
+   history:
+
+```bash
+azd env new officepilot-dev
+azd auth login
+azd env set AZURE_SUBSCRIPTION_ID "$AZURE_SUBSCRIPTION_ID"
+azd env set AZURE_LOCATION "$AZURE_LOCATION"
+azd env set OFFICEPILOT_AUTH_USERS "$OFFICEPILOT_AUTH_USERS"
+azd env set OFFICEPILOT_A2A_SHARED_SECRET "$OFFICEPILOT_A2A_SHARED_SECRET"
+azd env set GROQ_API_KEY "$GROQ_API_KEY"
+azd env set OFFICEPILOT_EXTERNAL_INGRESS false
+azd env set DATABASE_URL ""
+azd env set LANGFUSE_ENABLED false
+azd env set LANGFUSE_PUBLIC_KEY ""
+azd env set LANGFUSE_SECRET_KEY ""
+azd env set LANGFUSE_BASE_URL https://cloud.langfuse.com
+```
+
+The local azd environment contains deployment values; protect it like a
+secrets file and remove or rotate credentials when it is no longer needed.
+3. Run:
 
 ```bash
 azd up
 ```
 
-The repository includes an `azure.yaml` service definition and a Dockerfile.
-These files do not themselves create Azure resources; a live deployment still
-requires Azure authentication, infrastructure configuration, and a successful
-`azd up` run.
+`azd up` provisions the infrastructure, builds the Dockerfile remotely in
+ACR, and deploys the app. It requires the Azure deployment identity to be
+allowed to push to the provisioned registry. Before enabling external ingress,
+verify the deployed app image is the OfficePilot image, not the private
+bootstrap image. Keep the app private if provisioning or deployment fails.
+
+After confirming the image and Basic Auth configuration, set
+`OFFICEPILOT_EXTERNAL_INGRESS=true` in the same private azd environment and
+run `azd provision` to enable HTTPS ingress. The app still requires
+`OFFICEPILOT_AUTH_USERS`; `/health` is the only public route. The template
+pins the app to one replica and disables Google Tasks writes.
+
+This template defaults Workspace access to `mock`, has no per-user Google
+token-file mount, and does not create PostgreSQL/pgvector. A live Workspace
+deployment additionally needs user-to-token-file mapping and private,
+per-user OAuth token delivery, plus a tenant-scoped PostgreSQL connection.
+Those resources and token files must be configured separately before
+switching to Google mode. The Bicep template's optional `databaseUrl` and
+Langfuse parameters are sourced from the protected azd environment; parameter
+values are not checked into the repository.
+
+The default container image in Bicep is only a private bootstrap image; `azd`
+replaces it during service deployment. Never enable external ingress until
+the replacement is confirmed.
 
 ## Required environment variables
 
@@ -100,11 +166,83 @@ ADK requests retain a 180-second timeout and no provider retries. CrewAI
 requests retain a 45-second timeout and one bounded retry. These limits apply
 to all configured models.
 
-Set `LANGFUSE_ENABLED=true` and provide `LANGFUSE_PUBLIC_KEY`,
-`LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` to enable Langfuse tracing.
-OfficePilot fails startup/configuration when tracing is enabled without all
-three values. A successful live trace must still be confirmed in the Langfuse
-project.
+## Provider verification
+
+The shared provider switch is `LLM_PROVIDER=ollama` (default) or
+`LLM_PROVIDER=groq`. Ollama accepts `OLLAMA_API_BASE` or the common
+`OLLAMA_BASE_URL`; an optional trailing `/v1` is normalized for ADK, while
+CrewAI receives the OpenAI-compatible `/v1` URL. `OLLAMA_API_BASE` takes
+precedence if both root aliases are set. `OLLAMA_OPENAI_BASE_URL` can override
+CrewAI's derived endpoint. Groq uses `GROQ_API_KEY` and `GROQ_MODEL`; it does
+not silently fall back to Ollama.
+
+Run the credential-safe connectivity and model-presence check:
+
+```bash
+.venv/bin/python -m backend.llm_diagnostics
+```
+
+The report contains selected provider, consumer model IDs, endpoint status,
+and model availability only. It does not print API keys, response bodies, or
+provider error text. `ready` confirms that the provider listed the configured
+model; it does not prove generation, tool calling, structured output, or
+account quota.
+
+To explicitly make one real ADK model request that invokes a local probe tool
+and validates the returned Pydantic JSON schema:
+
+```bash
+.venv/bin/python -m backend.llm_smoke_test
+```
+
+This smoke test can consume model quota or incur cost. It emits no cost or
+token estimate because it does not establish trusted pricing/usage evidence.
+A passing result proves only the selected provider's ADK request, tool-call,
+and Pydantic-output path; it does not constitute a full Gmail/Calendar/database
+workflow.
+
+For Ollama, start the service, pull the configured model (`OLLAMA_MODEL` and
+`CREWAI_OLLAMA_MODEL`), then run both commands. For Groq, configure the key in
+a private `.env` or secret manager, select `LLM_PROVIDER=groq`, and set the
+account-accessible model ID. Never include secret values in command output,
+screenshots, tickets, or chat.
+
+On macOS, if Ollama is not already running, start it in one terminal:
+
+```bash
+ollama serve
+```
+
+In another terminal, pull and verify the configured Ollama tag. The ADK
+`llama3.1` name resolves to the same `latest` tag used by CrewAI:
+
+```bash
+ollama pull llama3.1:latest
+ollama list
+curl -fsS http://127.0.0.1:11434/api/tags
+.venv/bin/python -m backend.llm_diagnostics
+.venv/bin/python -m backend.llm_smoke_test
+```
+
+If `ollama serve` reports that port 11434 is already in use, a service is
+already listening; verify it with the health/model-list requests instead of
+starting a second server.
+
+## Langfuse verification
+
+Langfuse is opt-in. In a private local `.env`, set `LANGFUSE_ENABLED=true`,
+`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` for the
+correct hosted region or self-hosted instance. Keep the secret key out of
+source control. Startup performs an authentication check and fails closed if
+configuration or authentication is invalid. The server flushes the client
+during shutdown.
+
+For verification, start the API with those settings, submit an authenticated
+workflow, confirm its correlated trace/spans appear in the intended Langfuse
+project, and stop the API cleanly so the flush hook runs. Do not treat
+successful local startup or callback logs as proof that hosted trace ingestion
+succeeded. Traces may contain prompts, retrieved context, tool calls, and
+model responses; review Langfuse access and retention settings accordingly.
 
 ## Authentication and tenant isolation
 

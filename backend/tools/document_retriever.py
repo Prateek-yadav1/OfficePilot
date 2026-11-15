@@ -21,7 +21,10 @@ def _get_model():
     global _MODEL
 
     if _MODEL is None:
-        _MODEL = SentenceTransformer(MODEL_NAME)
+        try:
+            _MODEL = SentenceTransformer(MODEL_NAME, local_files_only=True)
+        except Exception:
+            _MODEL = SentenceTransformer(MODEL_NAME)
 
     return _MODEL
 

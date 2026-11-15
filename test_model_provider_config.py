@@ -62,6 +62,29 @@ def test_only_groq_or_ollama_can_be_selected(monkeypatch):
         get_llm_provider_settings("crewai")
 
 
+@pytest.mark.parametrize(
+    ("configured_url", "expected_root"),
+    [
+        ("http://localhost:11434", "http://localhost:11434"),
+        ("http://localhost:11434/v1/", "http://localhost:11434"),
+    ],
+)
+def test_ollama_base_url_aliases_normalize_for_adk_and_crewai(
+    monkeypatch,
+    configured_url,
+    expected_root,
+):
+    monkeypatch.setenv("OLLAMA_API_BASE", "")
+    monkeypatch.setenv("OLLAMA_OPENAI_BASE_URL", "")
+    monkeypatch.setenv("OLLAMA_BASE_URL", configured_url)
+
+    adk_settings = get_llm_provider_settings("adk")
+    crew_settings = get_llm_provider_settings("crewai")
+
+    assert adk_settings.api_base == expected_root
+    assert crew_settings.api_base == f"{expected_root}/v1"
+
+
 def test_groq_compatible_chat_supports_mocked_json_schema_and_tools(
     monkeypatch,
 ):

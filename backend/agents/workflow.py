@@ -1,6 +1,10 @@
 from google.adk.workflow import Workflow, START
 
-from .planner import planner_agent, client_route_decision
+from .planner import (
+    planner_agent,
+    initial_client_route_decision,
+    client_route_decision,
+)
 from .parallel_agents import parallel_research
 from .aggregator import aggregator_agent
 from .information_checker import information_checker
@@ -10,6 +14,7 @@ from .router import (
     route_decision,
     quality_router_agent,
     quality_route_decision,
+    briefing_normalizer_agent,
 )
 
 from .research_agent import research_agent
@@ -44,6 +49,18 @@ root_agent = Workflow(
 
         (
             START,
+            initial_client_route_decision,
+        ),
+
+        (
+            initial_client_route_decision,
+            {
+                "CLIENT_FOUND": parallel_research,
+                "LOOKUP": planner_agent,
+            },
+        ),
+
+        (
             planner_agent,
             client_route_decision,
         ),
@@ -100,6 +117,11 @@ root_agent = Workflow(
 
         (
             briefing_agent,
+            briefing_normalizer_agent,
+        ),
+
+        (
+            briefing_normalizer_agent,
             quality_checker,
         ),
 
@@ -133,7 +155,7 @@ root_agent = Workflow(
 
         (
             rework_agent,
-            quality_checker,
+            briefing_normalizer_agent,
         ),
 
         # ============================================================

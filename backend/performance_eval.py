@@ -13,12 +13,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from dotenv import load_dotenv
+
+load_dotenv(PROJECT_ROOT / ".env")
+
 from backend.tools.document_retriever import retrieve_documents
 from backend.tools.mock_office import get_calendar, search_emails
 
 
 def evaluate_officepilot_performance(client: str = "ABC Technologies") -> dict[str, Any]:
-    """Execute a representative OfficePilot retrieval flow and estimate cost/runtime."""
+    """Measure retrieval runtime without inventing model or cloud costs."""
     start = time.perf_counter()
     tenant_id = os.getenv("OFFICEPILOT_LOCAL_TENANT_ID", "").strip()
     user_id = os.getenv("OFFICEPILOT_LOCAL_USER_ID", "").strip()
@@ -43,7 +47,6 @@ def evaluate_officepilot_performance(client: str = "ABC Technologies") -> dict[s
 
     elapsed_seconds = round(time.perf_counter() - start, 3)
     provider = os.getenv("LLM_PROVIDER", "ollama").lower()
-    estimated_cost_usd = 0.0 if provider in {"ollama", "local"} else 0.07
 
     report = {
         "client": client,
@@ -52,8 +55,13 @@ def evaluate_officepilot_performance(client: str = "ABC Technologies") -> dict[s
         "email_records": len(email_result.get("emails", [])),
         "calendar_records": len(calendar_result.get("meetings", [])),
         "document_records": len(document_result),
-        "estimated_cost_usd": round(estimated_cost_usd, 4),
-        "notes": "This benchmark reflects the local data-access flow; billed cloud models would add API cost.",
+        "estimated_model_cost_usd": None,
+        "cost_estimate_status": "not_available",
+        "notes": (
+            "This retrieval-only benchmark does not invoke an LLM or collect "
+            "provider token usage. Model and hosted-service costs are not "
+            "estimated; runtime covers only the measured data-access flow."
+        ),
     }
 
     return report

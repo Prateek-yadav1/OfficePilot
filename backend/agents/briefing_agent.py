@@ -20,6 +20,9 @@ CLIENT:
 MEETING CONTEXT:
 {meeting_context}
 
+DOCUMENT FINDINGS:
+{document_context}
+
 ANALYSIS:
 {analysis_context}
 
@@ -93,6 +96,9 @@ Rules:
 - Use only information provided by the previous agents.
 - Never invent information.
 - Clearly distinguish facts from inference.
+- Include material project status, technical issues, pending approvals,
+  decisions, timeline requirements, and action items stated in the document
+  findings. Do not describe a detail as unavailable when it is present there.
 - Do not claim research was successful if the research
   tool returned no findings.
 """

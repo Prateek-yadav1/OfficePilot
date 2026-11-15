@@ -21,6 +21,9 @@ CLIENT:
 MEETING CONTEXT:
 {meeting_context}
 
+DOCUMENT FINDINGS:
+{document_context}
+
 ADDITIONAL RESEARCH:
 {research_context}
 
@@ -64,6 +67,9 @@ Rules:
 - Never invent facts.
 - Never invent names or dates.
 - Do not present an inference as a fact.
+- Include material project status, technical issues, pending approvals,
+  decisions, timeline requirements, and action items from the document
+  findings, even when email or calendar results are empty.
 - If information is unavailable, explicitly say so.
 - Prefer concise, actionable analysis.
 """,

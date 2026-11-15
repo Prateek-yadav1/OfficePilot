@@ -132,3 +132,20 @@ The conditional A2A workflow and final quality-gated delivery are now
 demonstrated in a deterministic test. OfficePilot is **not fully complete**
 against all eleven requirements; see
 [REQUIREMENTS_TRACEABILITY.md](./REQUIREMENTS_TRACEABILITY.md).
+
+## 2026-11-11 final live workflow attempt
+
+The attempt stopped during preflight and did not submit an execution. Sanitized
+Ollama diagnostics confirmed both configured models were available, and
+PostgreSQL accepted a connection and `SELECT 1`. Authentication validation
+failed because `OFFICEPILOT_AUTH_USERS` was not configured in the private
+runtime. The local API health endpoint was also unavailable on port 8000, and
+the API was not started.
+
+Per-user OAuth token mapping, live Gmail and Calendar access, tenant-scoped
+retrieval, A2A authentication/health, execution-store health, meeting
+discovery, final output, persistence, and authenticated UI visibility were
+not verified in this attempt. No execution ID or live workflow timings exist.
+No token or credential contents were accessed or printed, and Google Tasks
+writes remained disabled. The previous automated test result (90 passed) was
+not rerun as part of this blocked preflight.

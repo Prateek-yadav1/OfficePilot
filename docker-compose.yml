@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: officepilot_db
+      POSTGRES_USER: officepilot
+      POSTGRES_PASSWORD: officepilot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U officepilot -d officepilot_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  officepilot:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OFFICEPILOT_WORKSPACE_MODE=mock
+      - OFFICEPILOT_AUTH_USERS={"demo":{"password":"demopassword123456789","user_id":"officepilot-local-demo","tenant_id":"local-demo"}}
+      - OFFICEPILOT_LOCAL_USER_ID=officepilot-local-demo
+      - OFFICEPILOT_LOCAL_TENANT_ID=local-demo
+      - OFFICEPILOT_A2A_SHARED_SECRET=officepilot-a2a-secret-key-32charsmin!
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.1
+      - CREWAI_OLLAMA_MODEL=llama3.1:latest
+      - LANGFUSE_ENABLED=false
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=officepilot_db
+      - DB_USER=officepilot
+      - DB_PASSWORD=officepilot_password
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

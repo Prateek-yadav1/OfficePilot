@@ -1,4 +1,5 @@
 import json
+from datetime import date, timedelta
 
 from backend.tools import mock_office
 from backend.tools import google_workspace
@@ -9,6 +10,8 @@ from backend.tools import mcp_server
 def test_workspace_meetings_and_emails_are_filtered_by_tenant(
     monkeypatch,
 ):
+    first_meeting_date = date.today() + timedelta(days=2)
+    second_meeting_date = first_meeting_date + timedelta(days=1)
     monkeypatch.setenv(
         "OFFICEPILOT_AUTH_USERS",
         json.dumps(
@@ -47,7 +50,7 @@ def test_workspace_meetings_and_emails_are_filtered_by_tenant(
                 "user_id": "user-alice",
                 "client": "Shared Client",
                 "title": "Alice-only meeting",
-                "date": "2026-11-02",
+                "date": first_meeting_date.isoformat(),
                 "time": "10:00",
                 "participants": [],
             },
@@ -56,7 +59,7 @@ def test_workspace_meetings_and_emails_are_filtered_by_tenant(
                 "user_id": "user-bob",
                 "client": "Shared Client",
                 "title": "Bob-only meeting",
-                "date": "2026-11-03",
+                "date": second_meeting_date.isoformat(),
                 "time": "10:00",
                 "participants": [],
             },

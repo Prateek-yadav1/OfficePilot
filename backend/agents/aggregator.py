@@ -51,6 +51,13 @@ Rules:
 - Do not invent facts.
 - Only use information provided by the agents.
 - Clearly identify missing information.
+- Treat the document context as evidence. Include its current project status,
+  technical issues, proposed solutions, pending decisions, approvals, timeline
+  requirements, and action items in important_document_facts when present.
+- Do not list a project detail as missing_information if it appears in the
+  email or document context. Only mark it missing when it is absent from all
+  supplied sources.
+- Keep each list item concise and direct (1-2 sentences) to ensure focused, high-density facts.
 """,
 
     output_key="meeting_context",

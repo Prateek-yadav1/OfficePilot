@@ -285,6 +285,10 @@ function sleep(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+function apiUrl(path) {
+  return new URL(path, window.location.origin);
+}
+
 async function pollExecution(accepted) {
   let lastEventId = 0;
   let interval = 1500;
@@ -292,9 +296,9 @@ async function pollExecution(accepted) {
 
   while (true) {
     try {
-      const eventResponse = await fetch(
-        `${accepted.events_url}?after=${lastEventId}`,
-      );
+      const eventUrl = apiUrl(accepted.events_url);
+      eventUrl.searchParams.set("after", lastEventId);
+      const eventResponse = await fetch(eventUrl);
       if (!eventResponse.ok) {
         throw new Error("Unable to retrieve workflow progress.");
       }
@@ -302,7 +306,7 @@ async function pollExecution(accepted) {
       addProgressEvents(eventData.events || []);
       lastEventId = eventData.latest_event_id || lastEventId;
 
-      const statusResponse = await fetch(accepted.status_url);
+      const statusResponse = await fetch(apiUrl(accepted.status_url));
       if (!statusResponse.ok) {
         throw new Error("Unable to retrieve workflow status.");
       }
@@ -346,7 +350,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.querySelector(".button-label").textContent = "Preparing…";
 
   try {
-    const response = await fetch("/executions", {
+    const response = await fetch(apiUrl("/executions"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

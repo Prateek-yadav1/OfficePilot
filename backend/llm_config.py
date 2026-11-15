@@ -15,6 +15,26 @@ LLMConsumer = Literal["adk", "crewai"]
 GROQ_API_BASE = "https://api.groq.com/openai/v1"
 
 
+def _ollama_root_url() -> str:
+    """Return Ollama's native API root, accepting common base URL settings."""
+    base_url = (
+        os.getenv("OLLAMA_API_BASE")
+        or os.getenv("OLLAMA_BASE_URL")
+        or "http://127.0.0.1:11434"
+    ).strip().rstrip("/")
+    if base_url.endswith("/v1"):
+        base_url = base_url[:-3].rstrip("/")
+    return base_url
+
+
+def _ollama_openai_url() -> str:
+    """Return Ollama's OpenAI-compatible endpoint for CrewAI."""
+    configured_url = os.getenv("OLLAMA_OPENAI_BASE_URL", "").strip()
+    if configured_url:
+        return configured_url.rstrip("/")
+    return f"{_ollama_root_url()}/v1"
+
+
 @dataclass(frozen=True)
 class LLMProviderSettings:
     provider: Literal["groq", "ollama"]
@@ -48,19 +68,13 @@ def get_llm_provider_settings(consumer: LLMConsumer) -> LLMProviderSettings:
     if provider == "ollama":
         if consumer == "adk":
             model = os.getenv("OLLAMA_MODEL", "llama3.1").strip()
-            api_base = os.getenv(
-                "OLLAMA_API_BASE",
-                "http://127.0.0.1:11434",
-            ).rstrip("/")
+            api_base = _ollama_root_url()
         else:
             model = os.getenv(
                 "CREWAI_OLLAMA_MODEL",
                 "llama3.1:latest",
             ).strip()
-            api_base = os.getenv(
-                "OLLAMA_OPENAI_BASE_URL",
-                "http://127.0.0.1:11434/v1",
-            ).rstrip("/")
+            api_base = _ollama_openai_url()
         if not model:
             raise ValueError("The configured Ollama model must be non-empty.")
         return LLMProviderSettings(

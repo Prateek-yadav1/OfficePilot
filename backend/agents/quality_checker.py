@@ -1,10 +1,11 @@
 from google.adk.agents import Agent
+
 from .config import get_model
 
 
 quality_checker = Agent(
     name="quality_checker",
-    model=get_model(max_tokens=128),
+    model=get_model(max_tokens=256),
     description=(
         "Critically reviews the generated meeting briefing "
         "for completeness, accuracy, formatting, consistency, "
@@ -21,6 +22,9 @@ CLIENT:
 
 MEETING CONTEXT:
 {meeting_context}
+
+DOCUMENT FINDINGS:
+{document_context}
 
 ANALYSIS:
 {analysis_context}
@@ -59,6 +63,7 @@ The briefing must contain these sections:
 Every factual statement must be supported by:
 
 - Meeting Context
+- Document Findings
 - Analysis
 - Additional Research
 
@@ -78,8 +83,12 @@ The briefing must not invent:
 Check that the briefing does not contradict:
 
 - Meeting Context
+- Document Findings
 - Analysis
 - Additional Research
+
+Do not flag project status, technical issues, pending approvals, decisions,
+or timeline requirements as missing if they are stated in Document Findings.
 
 
 4. RISK LABELING

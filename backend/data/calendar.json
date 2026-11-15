@@ -24,5 +24,17 @@
       "XYZ Account Lead",
       "OfficePilot Account Manager"
     ]
+  },
+  {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
+    "client": "Acme Robotics",
+    "title": "Acme Robotics Warehouse Automation Review",
+    "date": "2026-11-20",
+    "time": "14:00",
+    "participants": [
+      "Maya Shah",
+      "OfficePilot Project Lead"
+    ]
   }
 ]

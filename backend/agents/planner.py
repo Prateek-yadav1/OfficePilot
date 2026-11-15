@@ -71,6 +71,28 @@ NOT_FOUND
 )
 
 
+def initial_client_route_decision(ctx: Context) -> Event:
+    """Skip model-based client discovery when the request names a client."""
+    request = str(ctx.state.get("original_request", ""))
+    explicit_client = extract_explicit_client(request)
+    if explicit_client:
+        ctx.state["client_name"] = explicit_client
+        ctx.state["client_match"] = {
+            "client": explicit_client,
+            "confidence": "user_provided",
+            "evidence": ["explicit_client_name_in_user_request"],
+        }
+        return Event(
+            route="CLIENT_FOUND",
+            output="Using the client explicitly named in the request.",
+        )
+
+    return Event(
+        route="LOOKUP",
+        output="No client was named; checking for the next meeting.",
+    )
+
+
 def client_route_decision(ctx: Context) -> Event:
     """Skip resource searches when planning did not identify a client."""
     request = str(ctx.state.get("original_request", ""))

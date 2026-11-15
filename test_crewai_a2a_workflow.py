@@ -137,7 +137,9 @@ class ScriptedCrewModel(BaseLLM):
 
 
 def _briefing() -> str:
-    return f"""# Meeting Briefing
+    return f"""Here is the requested briefing:
+
+# Meeting Briefing
 
 ## Client
 {CLIENT}
@@ -326,9 +328,11 @@ def _configure_adk_agents() -> tuple[
                 "client": CLIENT,
             },
         },
-        "The source document reports barcode scanning failures on damaged or "
-        "low-quality labels, an approximately five-minute inventory sync delay, "
-        "pending deployment approval, and two high-priority actions.",
+        "The initial workflow has been implemented. Barcode scanning and "
+        "inventory synchronization are undergoing testing. The source document "
+        "reports failures on damaged or low-quality labels, an approximately "
+        "five-minute inventory sync delay, pending deployment approval, and "
+        "high-priority actions.",
     )
     set_model(
         workflow_agents["calendar_agent"],
@@ -537,7 +541,7 @@ def test_main_workflow_runs_crewai_and_real_a2a_branch(monkeypatch):
         assert roles["Client Research Specialist"] == 1
         assert roles["Research Analyst"] >= 1
         assert roles["Research Quality Reviewer"] >= 1
-        assert adk_models["planner_agent"].calls >= 1
+        assert adk_models["planner_agent"].calls == 0
         assert adk_models["research_agent"].calls >= 1
         assert adk_models["briefing_agent"].calls >= 1
         assert adk_models["quality_checker"].calls >= 1
@@ -571,6 +575,16 @@ def test_main_workflow_runs_crewai_and_real_a2a_branch(monkeypatch):
         assert "damaged barcode labels" in aggregator_prompt
         assert "five-minute inventory sync delay" in aggregator_prompt
         assert "5 November 2026" in aggregator_prompt
+        assert any(
+            "Barcode scanning and inventory synchronization are undergoing testing"
+            in prompt
+            for prompt in adk_models["briefing_agent"].requests
+        )
+        assert any(
+            "Barcode scanning and inventory synchronization are undergoing testing"
+            in prompt
+            for prompt in adk_models["quality_checker"].requests
+        )
         assert any(
             reference["source"] == "Gmail"
             for reference in result.metadata["sources"]
@@ -614,6 +628,7 @@ def test_main_workflow_runs_crewai_and_real_a2a_branch(monkeypatch):
         assert ("agent_completed", "final_response_agent") in event_pairs
         assert result.status == "completed_with_warnings"
         assert result.metadata["quality"]["status"] == "PASS"
+        assert result.response.startswith("# Meeting Briefing\n")
         assert result.response.count("\n## ") == 11
         assert "action_executor_agent" not in {
             agent

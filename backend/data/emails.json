@@ -22,5 +22,21 @@
     "subject": "Pricing Discussion",
     "date": "2026-09-04",
     "content": "XYZ requested an updated enterprise pricing proposal."
+  },
+  {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
+    "client": "Acme Robotics",
+    "subject": "Warehouse Automation Barcode & Sync Testing",
+    "date": "2026-09-08",
+    "content": "Maya Shah reported that barcode scanning module occasionally fails on damaged labels and inventory updates show 5-minute delays during peak warehouse operations."
+  },
+  {
+    "tenant_id": "local-demo",
+    "user_id": "officepilot-local-demo",
+    "client": "Acme Robotics",
+    "subject": "Pilot Deployment Timeline and Approval Meeting",
+    "date": "2026-09-12",
+    "content": "Maya Shah requested an updated project timeline and confirmed the review meeting to finalize pilot deployment approval."
   }
 ]

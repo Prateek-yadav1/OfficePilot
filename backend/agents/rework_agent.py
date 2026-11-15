@@ -19,6 +19,9 @@ CLIENT:
 MEETING CONTEXT:
 {meeting_context}
 
+DOCUMENT FINDINGS:
+{document_context}
+
 ANALYSIS:
 {analysis_context}
 
@@ -36,6 +39,9 @@ RULES:
 1. Correct every relevant issue identified by the Quality Checker.
 2. Use only facts supported by the supplied context, analysis and research.
 3. Preserve accurate information from the existing briefing.
+   Include material project status, technical issues, pending approvals,
+   decisions, timeline requirements, and action items from DOCUMENT FINDINGS.
+   Do not call a detail missing when it appears in those findings.
 4. Clearly distinguish FACT-BASED RISK from INFERENCE.
 5. Do not invent names, dates, times, assignments, deadlines or facts.
 6. Distinguish research being performed from research producing new

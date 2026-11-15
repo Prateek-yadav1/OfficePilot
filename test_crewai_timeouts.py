@@ -4,6 +4,11 @@ from unittest.mock import AsyncMock
 
 import httpx
 import pytest
+from crewai.events import (
+    TaskFailedEvent,
+    TaskStartedEvent,
+    crewai_event_bus,
+)
 
 from backend.a2a_demo.client_agent import create_a2a_http_client
 from backend.agents.observability import (
@@ -12,6 +17,7 @@ from backend.agents.observability import (
 )
 from backend.agents import research_agent as research_agent_module
 from backend.crewai_research.config import (
+    CREWAI_MAX_OUTPUT_TOKENS,
     CREWAI_MODEL_MAX_RETRIES,
     CREWAI_MODEL_TIMEOUT_SECONDS,
 )
@@ -24,9 +30,12 @@ from backend.agents.parallel_agents import (
     calendar_agent,
     document_agent,
     email_agent,
+    parallel_research,
 )
+from backend.llm_config import get_llm_provider_settings
 from backend.agents.router import (
     MAX_QUALITY_REVIEW_CYCLES,
+    _quality_checker_passed,
     quality_route_decision,
 )
 
@@ -36,8 +45,18 @@ def test_crewai_has_bounded_role_iterations_and_task_timeouts():
 
     assert len(crew.agents) == 3
     assert len(crew.tasks) == 3
+    assert crew.tasks[0].context is None
+    assert crew.tasks[1].context == [crew.tasks[0]]
+    assert crew.tasks[2].context == [crew.tasks[1]]
     assert all(agent.max_iter == 1 for agent in crew.agents)
-    assert all(agent.max_execution_time == 100 for agent in crew.agents)
+    assert {
+        agent.role: agent.max_execution_time
+        for agent in crew.agents
+    } == {
+        "Client Research Specialist": 45,
+        "Research Analyst": 45,
+        "Research Quality Reviewer": 50,
+    }
     assert all(agent.allow_delegation is False for agent in crew.agents)
     assert all(not agent.tools for agent in crew.agents)
     assert crew.process.value == "sequential"
@@ -90,27 +109,57 @@ def test_quality_review_rework_cycles_have_a_hard_limit():
     assert "did not return PASS" in state["deterministic_quality_errors"][0]
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("PASS", True),
+        ("**PASS** The briefing meets all major requirements.", True),
+        ("  **PASS**\nRationale: all required sections are present.", True),
+        ("PASSIVE: not a passing verdict", False),
+        ("PASS: concerns remain", False),
+        ("REVISE: a required section is missing", False),
+        ("**REVISE**", False),
+        ("", False),
+    ],
+)
+def test_quality_checker_verdict_accepts_markdown_pass_only(
+    status,
+    expected,
+):
+    assert _quality_checker_passed(status) is expected
+
+
 def test_provider_timeouts_are_explicit_and_retry_budget_is_bounded():
+    from google.adk.agents import ParallelAgent, SequentialAgent
+
     from backend.crewai_research.config import get_crewai_llm
     from backend.agents.config import get_model
 
     crew_model = get_crewai_llm()
     adk_model = get_model()
     quality_model = quality_checker.model
+    expected_research_agent = (
+        SequentialAgent
+        if get_llm_provider_settings("adk").provider == "ollama"
+        else ParallelAgent
+    )
 
+    assert isinstance(parallel_research, expected_research_agent)
     assert CREWAI_MODEL_TIMEOUT_SECONDS == 45
     assert CREWAI_MODEL_MAX_RETRIES == 1
+    assert CREWAI_MAX_OUTPUT_TOKENS == 128
+    assert crew_model.delegate.max_tokens == CREWAI_MAX_OUTPUT_TOKENS
     assert crew_model.delegate.timeout == CREWAI_MODEL_TIMEOUT_SECONDS
     assert adk_model._additional_args["timeout"] == 180
     assert adk_model._additional_args["num_retries"] == 0
     assert quality_model._additional_args["timeout"] == 180
     assert quality_model._additional_args["num_retries"] == 0
-    assert quality_model._additional_args["max_tokens"] == 128
+    assert quality_model._additional_args["max_tokens"] == 256
     assert rework_agent.model._additional_args["max_tokens"] == 900
     assert planner_agent.model._additional_args["max_tokens"] == 128
-    assert email_agent.model._additional_args["max_tokens"] == 500
-    assert document_agent.model._additional_args["max_tokens"] == 600
-    assert calendar_agent.model._additional_args["max_tokens"] == 400
+    assert email_agent.model._additional_args["max_tokens"] == 512
+    assert document_agent.model._additional_args["max_tokens"] == 512
+    assert calendar_agent.model._additional_args["max_tokens"] == 512
 
 
 def test_crewai_model_retries_transient_failures_only_within_limit():
@@ -121,7 +170,7 @@ def test_crewai_model_retries_transient_failures_only_within_limit():
         def call(self, **kwargs):
             self.calls += 1
             if self.calls == 1:
-                raise TimeoutError("private provider details")
+                raise httpx.ConnectError("private provider details")
             return "Recovered response"
 
         def supports_function_calling(self):
@@ -160,10 +209,100 @@ def test_crewai_model_retries_transient_failures_only_within_limit():
     assert result == "Recovered response"
     assert model.calls == 2
     assert [event for event, _ in events].count("crewai_model_started") == 2
-    assert "crewai_model_timed_out" in [event for event, _ in events]
+    assert "crewai_model_failed" in [event for event, _ in events]
     assert "crewai_model_retrying" in [event for event, _ in events]
     completed = next(data for event, data in events if event == "crewai_model_completed")
     assert completed["agent_iteration"] == 1
+
+
+def test_crewai_model_does_not_retry_timed_out_requests():
+    class TimedOutModel:
+        def __init__(self):
+            self.calls = 0
+
+        def call(self, **kwargs):
+            self.calls += 1
+            raise httpx.ReadTimeout("private provider details")
+
+        def supports_function_calling(self):
+            return False
+
+        def supports_stop_words(self):
+            return False
+
+        def get_context_window_size(self):
+            return 4096
+
+        def supports_multimodal(self):
+            return False
+
+    model = TimedOutModel()
+    instrumented = InstrumentedCrewLLM(
+        model="officepilot-instrumented-crewai",
+        delegate=model,
+        max_retries=CREWAI_MODEL_MAX_RETRIES,
+        retry_backoff_seconds=0,
+    )
+    events = []
+    tokens = begin_execution_observation(
+        "timeout-no-retry-test",
+        lambda event_type, data: events.append((event_type, data)),
+    )
+    try:
+        with pytest.raises(httpx.ReadTimeout):
+            instrumented.call(
+                messages=[{"content": "redacted test message"}],
+                from_agent=SimpleNamespace(role="Research Analyst"),
+                from_task=SimpleNamespace(name="analysis"),
+            )
+    finally:
+        end_execution_observation(tokens)
+
+    assert model.calls == 1
+    assert [event for event, _ in events].count("crewai_model_started") == 1
+    assert "crewai_model_timed_out" in [event for event, _ in events]
+    started = next(
+        data for event, data in events if event == "crewai_model_started"
+    )
+    assert started["input_characters"] > 0
+    assert "redacted test message" not in str(events)
+
+
+def test_crewai_task_events_record_role_failures_without_error_contents():
+    task = SimpleNamespace(
+        name="Research Analyst task",
+        description="private task prompt",
+        id=None,
+        fingerprint=None,
+        agent=SimpleNamespace(role="Research Analyst"),
+    )
+    events = []
+    tokens = begin_execution_observation(
+        "crew-task-events",
+        lambda event_type, data: events.append((event_type, data)),
+    )
+    try:
+        for event in (
+            TaskStartedEvent(context=None, task=task),
+            TaskFailedEvent(
+                error="private prompt and provider response",
+                error_type=TimeoutError,
+                task=task,
+            ),
+        ):
+            future = crewai_event_bus.emit(task, event)
+            if future is not None:
+                future.result(timeout=5)
+    finally:
+        end_execution_observation(tokens)
+
+    assert [name for name, _ in events] == [
+        "crewai_task_started",
+        "crewai_task_failed",
+    ]
+    assert all(data["agent"] == "Research Analyst" for _, data in events)
+    assert events[1][1]["error_type"] == "TimeoutError"
+    assert "private" not in str(events)
 
 
 @pytest.mark.parametrize(
@@ -312,7 +451,14 @@ def test_crewai_timeout_returns_incomplete_report_without_claiming_review(
     monkeypatch,
 ):
     class TimeoutCrew:
-        tasks = [SimpleNamespace(output=None)]
+        tasks = [
+            SimpleNamespace(
+                output=SimpleNamespace(
+                    raw="Researcher finding: migration is pending."
+                )
+            ),
+            SimpleNamespace(output=None),
+        ]
 
         async def kickoff_async(self, inputs):
             await asyncio.sleep(1)
@@ -345,6 +491,7 @@ def test_crewai_timeout_returns_incomplete_report_without_claiming_review(
         end_execution_observation(tokens)
 
     assert "Research status: incomplete" in result
+    assert "Researcher finding: migration is pending." in result
     assert "Review status: not_run" in result
     assert "No successful review is claimed." in result
     assert "Remote A2A reviewer response" not in result

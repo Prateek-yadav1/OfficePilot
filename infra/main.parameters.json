@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "officePilotAuthUsers": {
+      "value": "${OFFICEPILOT_AUTH_USERS}"
+    },
+    "a2aSharedSecret": {
+      "value": "${OFFICEPILOT_A2A_SHARED_SECRET}"
+    },
+    "groqApiKey": {
+      "value": "${GROQ_API_KEY}"
+    },
+    "databaseUrl": {
+      "value": "${DATABASE_URL}"
+    },
+    "externalIngress": {
+      "value": "${OFFICEPILOT_EXTERNAL_INGRESS}"
+    },
+    "langfuseEnabled": {
+      "value": "${LANGFUSE_ENABLED}"
+    },
+    "langfusePublicKey": {
+      "value": "${LANGFUSE_PUBLIC_KEY}"
+    },
+    "langfuseSecretKey": {
+      "value": "${LANGFUSE_SECRET_KEY}"
+    },
+    "langfuseBaseUrl": {
+      "value": "${LANGFUSE_BASE_URL}"
+    }
+  }
+}

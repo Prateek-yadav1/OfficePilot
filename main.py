@@ -242,6 +242,7 @@ def _metadata_from_state(
             "review_cycles": int(
                 state.get("quality_review_cycles", 0) or 0
             ),
+            "failure": state.get("quality_failure"),
         },
     }
 
@@ -290,6 +291,7 @@ async def run_officepilot(
     )
 
     events: list[Event] = []
+    quality_stage_failure: dict[str, str] | None = None
     async for event in runner.run_async(
         user_id=user_id,
         session_id=session_id,
@@ -299,6 +301,23 @@ async def run_officepilot(
         ),
     ):
         if getattr(event, "error_code", None):
+            if getattr(event, "author", None) == "quality_checker":
+                quality_stage_failure = {
+                    "stage": "quality_checker",
+                    "error_code": str(event.error_code),
+                }
+                logging.getLogger(__name__).error(
+                    "event=quality_review_failed stage=quality_checker "
+                    "error_code=%s",
+                    quality_stage_failure["error_code"],
+                )
+                events.append(event)
+                continue
+            logging.getLogger(__name__).error(
+                "event=adk_event_failed author=%s error_code=%s",
+                getattr(event, "author", "unknown"),
+                event.error_code,
+            )
             raise RuntimeError(
                 "ADK workflow failed with event "
                 f"{event.error_code} ({event.error_message})."
@@ -313,42 +332,73 @@ async def run_officepilot(
     if session is None:
         raise RuntimeError("The workflow session could not be retrieved.")
 
-    terminal_events = [
-        event
-        for event in events
-        if getattr(event, "author", None)
-        in {"final_response_agent", "quality_blocked_agent"}
-    ]
-    if not terminal_events:
-        raise RuntimeError(
-            "The workflow ended without a final response or quality-blocked result."
+    if quality_stage_failure is not None:
+        state = session.state
+        state["execution_status"] = "failed"
+        state["quality_status"] = "ERROR"
+        state["quality_failure"] = quality_stage_failure
+        response = (
+            "# Meeting Briefing Withheld\n\n"
+            "OfficePilot could not complete its quality review, so the "
+            "briefing was not approved for delivery. Partial source findings "
+            "are retained below."
         )
-
-    terminal_event = terminal_events[-1]
-    response = _event_text(terminal_event)
-    if not response.strip():
-        raise RuntimeError("The workflow final response was empty.")
-
-    state = session.state
-    execution_status = str(
-        state.get("execution_status", "")
-    ).strip()
-    if terminal_event.author == "quality_blocked_agent":
         execution_status = "failed"
-    if execution_status not in {
-        "completed",
-        "completed_with_warnings",
-        "failed",
-    }:
-        raise RuntimeError(
-            "The workflow did not record an approved terminal status."
-        )
+    else:
+        terminal_events = [
+            event
+            for event in events
+            if getattr(event, "author", None)
+            in {"final_response_agent", "quality_blocked_agent"}
+        ]
+        if not terminal_events:
+            raise RuntimeError(
+                "The workflow ended without a final response or "
+                "quality-blocked result."
+            )
+
+        terminal_event = terminal_events[-1]
+        response = _event_text(terminal_event).strip()
+        if terminal_event.author == "quality_blocked_agent":
+            if not response:
+                response = (
+                    "# Meeting Briefing Withheld\n\n"
+                    "OfficePilot could not verify the briefing after the "
+                    "permitted revision attempts. It was not forwarded to "
+                    "action proposal or execution."
+                )
+            state = session.state
+            state["execution_status"] = "failed"
+            execution_status = "failed"
+        else:
+            if not response:
+                raise RuntimeError("The workflow final response was empty.")
+            state = session.state
+            execution_status = str(
+                state.get("execution_status", "")
+            ).strip()
+
+        if execution_status not in {
+            "completed",
+            "completed_with_warnings",
+            "failed",
+        }:
+            if terminal_event.author == "quality_blocked_agent":
+                execution_status = "failed"
+            else:
+                raise RuntimeError(
+                    "The workflow did not record an approved terminal status."
+                )
 
     metadata = _metadata_from_state(
         state,
         session_id,
         logging_plugin.snapshot(),
     )
+    if quality_stage_failure is not None:
+        metadata["warnings"].append(
+            "Quality review did not complete; the briefing was withheld."
+        )
     if metadata["missing_information"]:
         metadata["warnings"].append(
             "The briefing includes information that was not available from its sources."

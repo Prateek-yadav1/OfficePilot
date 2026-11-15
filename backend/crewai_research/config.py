@@ -1,12 +1,15 @@
+import os
+
 from .observability import InstrumentedCrewLLM
 from crewai import LLM
 from crewai.llms.base_llm import BaseLLM
 
 from backend.llm_config import get_llm_provider_settings
 
-CREWAI_MODEL_TIMEOUT_SECONDS = 45
+CREWAI_MODEL_TIMEOUT_SECONDS = int(os.getenv("CREWAI_MODEL_TIMEOUT_SECONDS", "45"))
 CREWAI_MODEL_MAX_RETRIES = 1
 CREWAI_RETRY_BACKOFF_SECONDS = 0.5
+CREWAI_MAX_OUTPUT_TOKENS = 128
 
 
 def _instrument(llm: LLM) -> BaseLLM:
@@ -30,7 +33,7 @@ def get_crewai_llm() -> BaseLLM:
                 custom_openai=True,
                 base_url=settings.api_base,
                 api_key="ollama",
-                max_tokens=700,
+                max_tokens=CREWAI_MAX_OUTPUT_TOKENS,
                 temperature=0.2,
                 timeout=CREWAI_MODEL_TIMEOUT_SECONDS,
             )
@@ -41,7 +44,7 @@ def get_crewai_llm() -> BaseLLM:
             model=f"groq/{settings.model}",
             base_url=settings.api_base,
             api_key=settings.api_key,
-            max_tokens=700,
+            max_tokens=CREWAI_MAX_OUTPUT_TOKENS,
             temperature=0.2,
             timeout=CREWAI_MODEL_TIMEOUT_SECONDS,
         )
