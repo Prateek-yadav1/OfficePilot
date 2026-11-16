@@ -18,6 +18,7 @@ def get_model(max_tokens: int = 1200) -> LiteLlm:
         model_name = f"groq/{settings.model}"
 
     timeout_seconds = int(os.getenv("ADK_MODEL_TIMEOUT_SECONDS", "180"))
+    num_retries = int(os.getenv("ADK_MODEL_NUM_RETRIES", "0"))
 
     return LiteLlm(
         model=model_name,
@@ -25,5 +26,6 @@ def get_model(max_tokens: int = 1200) -> LiteLlm:
         api_key=settings.api_key,
         max_tokens=max_tokens,
         timeout=timeout_seconds,
-        num_retries=0,
+        num_retries=num_retries,
+        retry_strategy="exponential_backoff_retry",
     )

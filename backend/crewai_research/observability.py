@@ -154,5 +154,8 @@ def _is_retryable_model_error(error_type: str) -> bool:
     retryable = {
         "apiconnectionerror",
         "connecterror",
+        "ratelimiterror",
+        "serviceunavailableerror",
+        "internalservererror",
     }
     return error_type.casefold() in retryable

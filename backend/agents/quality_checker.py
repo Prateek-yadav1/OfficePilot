@@ -1,11 +1,19 @@
+import asyncio
 from google.adk.agents import Agent
 
+from backend.llm_config import get_llm_provider_settings
 from .config import get_model
+
+
+async def _throttle_for_cloud_rate_limits(callback_context):
+    if get_llm_provider_settings("adk").provider == "groq":
+        await asyncio.sleep(12)
 
 
 quality_checker = Agent(
     name="quality_checker",
     model=get_model(max_tokens=256),
+    before_agent_callback=_throttle_for_cloud_rate_limits,
     description=(
         "Critically reviews the generated meeting briefing "
         "for completeness, accuracy, formatting, consistency, "

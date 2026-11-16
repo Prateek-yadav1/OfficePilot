@@ -8,6 +8,7 @@ os.environ["HOME"] = str(safe_home)
 
 if "pytest" in sys.argv[0] or any("pytest" in arg for arg in sys.argv) or "pytest" in sys.modules:
     os.environ["ADK_MODEL_TIMEOUT_SECONDS"] = "180"
+    os.environ["ADK_MODEL_NUM_RETRIES"] = "0"
     os.environ["CREWAI_MODEL_TIMEOUT_SECONDS"] = "45"
     os.environ["OFFICEPILOT_WORKSPACE_MODE"] = "mock"
     os.environ["LLM_PROVIDER"] = "ollama"
