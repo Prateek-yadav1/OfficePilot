@@ -7,7 +7,7 @@ from .schemas import MeetingContext
 aggregator_agent = Agent(
     name="context_aggregator",
 
-    model=get_model(max_tokens=450),
+    model=get_model(max_tokens=1000),
     output_schema=MeetingContext,
 
     description=(
@@ -48,6 +48,7 @@ Create a structured meeting context containing:
 8. Missing information
 
 Rules:
+- Output a valid JSON object adhering to the schema.
 - Do not invent facts.
 - Only use information provided by the agents.
 - Clearly identify missing information.

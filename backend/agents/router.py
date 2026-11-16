@@ -93,6 +93,14 @@ class QualityRouterAgent(BaseAgent):
         quality_status = str(
             ctx.session.state.get("quality_status", "")
         ).strip().upper()
+        if not _quality_checker_passed(quality_status):
+            # If the LLM included a preamble before PASS without requesting REVISE,
+            # strip the preamble to extract the PASS verdict.
+            if "PASS" in quality_status and "REVISE" not in quality_status:
+                candidate = re.sub(r"^[\s\S]*?\bPASS\b", "PASS", quality_status)
+                if _quality_checker_passed(candidate):
+                    quality_status = candidate
+
         decision = (
             "PASS"
             if _quality_checker_passed(quality_status)

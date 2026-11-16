@@ -828,6 +828,11 @@ def home() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
+@app.get("/index.html", include_in_schema=False)
+def index_html() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

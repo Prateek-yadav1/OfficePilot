@@ -180,7 +180,7 @@ def search_emails(
     if not client:
         raise ValueError("client must not be empty")
     limit = max(1, min(int(max_results), 20))
-    query = f'in:inbox "{client.replace(chr(34), chr(92) + chr(34))}"'
+    query = f'"{client.replace(chr(34), chr(92) + chr(34))}"'
     gmail = _gmail_service(user_id)
     response = gmail.users().messages().list(
         userId="me", q=query, maxResults=limit

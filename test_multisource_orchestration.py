@@ -111,9 +111,9 @@ def test_automatic_meeting_match_enables_tenant_scoped_retrieval(monkeypatch):
         return_value=[{"title": "Acme project brief"}],
     ) as retrieve:
         documents = search_client_documents(
-            "project status",
-            "Acme Robotics",
-            document_context,
+            client="Acme Robotics",
+            tool_context=document_context,
+            query="project status",
         )
     assert documents == [{"title": "Acme project brief"}]
     retrieve.assert_called_once_with(

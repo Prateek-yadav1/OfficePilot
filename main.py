@@ -17,6 +17,7 @@ load_dotenv()
 from backend.agents.langfuse_setup import configure_langfuse
 from backend.agents.observability import (
     OfficePilotLoggingPlugin,
+    install_provider_error_log_filter,
     validate_user_prompt,
 )
 
@@ -259,6 +260,8 @@ async def run_officepilot(
     is_safe, safety_reason = validate_user_prompt(request)
     if not is_safe:
         raise ValueError(f"Request rejected by safety guardrail: {safety_reason}")
+
+    install_provider_error_log_filter()
 
     # Import after optional instrumentation setup.
     from backend.agents.workflow import root_agent

@@ -11,11 +11,7 @@ quality_checker = Agent(
         "for completeness, accuracy, formatting, consistency, "
         "and actionability."
     ),
-    instruction="""
-You are the Quality Checker Agent in OfficePilot.
-
-Your job is to perform a STRICT quality review of the generated
-meeting briefing before it is delivered to the user.
+    instruction="""You are the Quality Checker Agent in OfficePilot.
 
 CLIENT:
 {client_name}
@@ -26,149 +22,24 @@ MEETING CONTEXT:
 DOCUMENT FINDINGS:
 {document_context}
 
-ANALYSIS:
-{analysis_context}
-
-ADDITIONAL RESEARCH:
-{research_context}
-
 CURRENT BRIEFING:
 {final_briefing}
 
+CRITICAL FORMAT REQUIREMENT:
+Your response MUST begin immediately with either "PASS" or "REVISE:".
+DO NOT write any introduction, thinking aloud, preamble, or conversational filler like "I'll begin the quality check".
+Start your reply with the word PASS or REVISE on line 1.
 
-========================
-QUALITY CHECKS
-========================
+Check:
+1. Does the briefing contain the required sections (Client, Meeting Details, Key Client Priorities, Client Concerns, Important Facts, Potential Risks, Questions to Ask, Recommended Discussion Topics, Executive Summary)?
+2. Are risks labeled as FACT-BASED or INFERENCE?
+3. Is formatting readable with proper headings?
 
-Check the briefing against ALL of the following criteria.
-
-1. COMPLETENESS
-
-The briefing must contain these sections:
-
-- Client
-- Meeting Details
-- Key Client Priorities
-- Client Concerns
-- Important Facts
-- Additional Research
-- Potential Risks
-- Questions to Ask
-- Recommended Discussion Topics
-- Executive Summary
-
-
-2. ACCURACY
-
-Every factual statement must be supported by:
-
-- Meeting Context
-- Document Findings
-- Analysis
-- Additional Research
-
-The briefing must not invent:
-
-- people
-- dates
-- times
-- locations
-- company facts
-- meeting facts
-- project facts
-
-
-3. CONSISTENCY
-
-Check that the briefing does not contradict:
-
-- Meeting Context
-- Document Findings
-- Analysis
-- Additional Research
-
-Do not flag project status, technical issues, pending approvals, decisions,
-or timeline requirements as missing if they are stated in Document Findings.
-
-
-4. RISK LABELING
-
-Every risk must clearly be classified as:
-
-- FACT-BASED RISK
-- INFERENCE
-
-
-5. ACTIONABILITY
-
-The briefing should provide useful:
-
-- questions
-- discussion topics
-- priorities
-- risks
-
-
-6. FORMATTING
-
-Check for obvious formatting problems.
-
-Examples of formatting problems:
-
-- words incorrectly joined together
-- missing spaces
-- broken headings
-- incomplete sentences
-- duplicated sections
-- unreadable structure
-
-
-7. RESEARCH ACCURACY
-
-If research says information was NOT found, the briefing
-must not present that information as known.
-
-For example:
-
-If research says:
-
-"No information was found regarding the meeting location."
-
-The briefing must NOT invent a meeting location.
-
-
-========================
-DECISION
-========================
-
-Return EXACTLY one of:
-
+If acceptable, reply:
 PASS
 
-or
-
-REVISE: <short description of the most important problems>
-
-
-========================
-IMPORTANT RULES
-========================
-
-Return PASS only if the briefing satisfies all major
-requirements.
-
-Return REVISE if there is even one important problem.
-
-If returning REVISE:
-
-- Identify the most important problems.
-- Do not rewrite the briefing.
-- Do not perform additional research.
-- Do not invent information.
-
-Your job is ONLY quality evaluation.
-
-Return only PASS or REVISE with a short explanation.
+If critical issues exist, reply:
+REVISE: <short explanation>
 """,
     output_key="quality_status",
 )

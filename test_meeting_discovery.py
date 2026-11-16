@@ -158,7 +158,28 @@ def test_document_search_uses_client_filter_and_safe_fixed_limit() -> None:
         return_value=[],
     ) as retrieve:
         result = search_client_documents(
+            client="XYZ Solutions",
+            tool_context=SimpleNamespace(
+                state={"tenant_id": "tenant-test"}
+            ),
             query="meeting preparation context",
+        )
+
+    retrieve.assert_called_once_with(
+        query="meeting preparation context",
+        client="XYZ Solutions",
+        tenant_id="tenant-test",
+        limit=3,
+    )
+    assert result == []
+
+
+def test_document_search_uses_default_query_when_model_omits_it() -> None:
+    with patch(
+        "backend.agents.parallel_agents.retrieve_client_documents",
+        return_value=[],
+    ) as retrieve:
+        result = search_client_documents(
             client="XYZ Solutions",
             tool_context=SimpleNamespace(
                 state={"tenant_id": "tenant-test"}
@@ -166,7 +187,11 @@ def test_document_search_uses_client_filter_and_safe_fixed_limit() -> None:
         )
 
     retrieve.assert_called_once_with(
-        query="meeting preparation context",
+        query=(
+            "meeting preparation, project overview, current status, timeline, "
+            "milestones, requirements, deliverables, decisions, risks, and "
+            "prior meeting notes"
+        ),
         client="XYZ Solutions",
         tenant_id="tenant-test",
         limit=3,

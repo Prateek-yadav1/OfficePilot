@@ -31,6 +31,59 @@ if not logger.handlers:
 
 logger.propagate = False
 
+_PROVIDER_ERROR_LOGGERS = (
+    "google.adk.workflow._node_runner",
+    "google.adk.runners",
+)
+
+
+def _contains_provider_error(error: BaseException) -> bool:
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        module_root = type(current).__module__.split(".", 1)[0]
+        if module_root in {"litellm", "openai", "groq"} or type(
+            current
+        ).__name__ in {"BadRequestError", "APIStatusError"}:
+            return True
+        if isinstance(current, BaseExceptionGroup):
+            pending.extend(current.exceptions)
+        cause = current.__cause__ or current.__context__
+        if cause is not None:
+            pending.append(cause)
+    return False
+
+
+class _ProviderErrorLogFilter(logging.Filter):
+    """Redact provider exception text that may contain prompts or tool data."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info is None or not _contains_provider_error(
+            record.exc_info[1]
+        ):
+            return True
+        record.msg = "Model provider request failed; exception details redacted."
+        record.args = ()
+        record.exc_info = None
+        record.exc_text = None
+        return True
+
+
+def install_provider_error_log_filter() -> None:
+    """Redact provider traces emitted by ADK before they reach log handlers."""
+    for logger_name in _PROVIDER_ERROR_LOGGERS:
+        target_logger = logging.getLogger(logger_name)
+        if not any(
+            isinstance(item, _ProviderErrorLogFilter)
+            for item in target_logger.filters
+        ):
+            target_logger.addFilter(_ProviderErrorLogFilter())
+
+
 ProgressSink = Callable[[str, dict[str, Any]], None]
 _execution_id: ContextVar[str | None] = ContextVar(
     "officepilot_execution_id",

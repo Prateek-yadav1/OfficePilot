@@ -19,6 +19,12 @@ from backend.tools.document_retriever import (
     retrieve_documents as retrieve_client_documents,
 )
 
+_DEFAULT_DOCUMENT_QUERY = (
+    "meeting preparation, project overview, current status, timeline, "
+    "milestones, requirements, deliverables, decisions, risks, and prior "
+    "meeting notes"
+)
+
 
 def _tenant_id(tool_context: ToolContext) -> str:
     tenant_id = tool_context.state.get("tenant_id")
@@ -92,13 +98,13 @@ async def discover_next_meeting(
 
 
 def search_client_documents(
-    query: str,
     client: str,
     tool_context: ToolContext,
+    query: str = "",
 ) -> list[dict[str, Any]]:
-    """Search only the named client's documents with a fixed result cap."""
+    """Search client documents, using a meeting-prep query if none is given."""
     return retrieve_client_documents(
-        query=query,
+        query=query.strip() or _DEFAULT_DOCUMENT_QUERY,
         client=client,
         tenant_id=_tenant_id(tool_context),
         limit=3,
@@ -144,8 +150,9 @@ Client:
 Your ONLY responsibility is to investigate document information.
 
 1. Call the client-scoped document search tool with:
-   - query: the important document topics to investigate
    - client: the client name provided above
+   The query is optional; if omitted, the tool uses a broad meeting-prep
+   search covering project status, timeline, requirements, risks, and notes.
    The tool uses a fixed limit of three matching documents.
 2. Use the returned documents and relevance scores to identify useful information.
 3. Extract contract information, requirements, previous meeting notes, and other relevant facts.

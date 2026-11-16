@@ -6,6 +6,7 @@ from backend.agents.observability import (
     OfficePilotLoggingPlugin,
     begin_execution_observation,
     end_execution_observation,
+    install_provider_error_log_filter,
     logger,
 )
 from main import _metadata_from_state
@@ -129,6 +130,23 @@ def test_model_error_event_keeps_allowlisted_metadata_only():
     assert failure["provider"] == "groq"
     assert failure["model"] == "openai/gpt-oss-120b"
     assert "PRIVATE" not in str(failure)
+
+
+def test_adk_provider_error_trace_redacts_exception_content(caplog):
+    class BadRequestError(Exception):
+        pass
+
+    install_provider_error_log_filter()
+    target_logger = logging.getLogger("google.adk.workflow._node_runner")
+
+    try:
+        raise BadRequestError("PRIVATE_WORKSPACE_CONTENT")
+    except BadRequestError:
+        with caplog.at_level(logging.ERROR, logger=target_logger.name):
+            target_logger.exception("Node execution failed with exception")
+
+    assert "PRIVATE_WORKSPACE_CONTENT" not in caplog.text
+    assert "exception details redacted" in caplog.text
 
 
 def test_tool_exception_group_reports_nested_types_without_messages():
