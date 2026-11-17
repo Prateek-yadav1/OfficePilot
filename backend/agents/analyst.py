@@ -1,19 +1,13 @@
-import asyncio
 from google.adk.agents import Agent
 
-from backend.llm_config import get_llm_provider_settings
 from .config import get_model
-
-
-async def _throttle_for_cloud_rate_limits(callback_context):
-    if get_llm_provider_settings("adk").provider == "groq":
-        await asyncio.sleep(12)
+from .retry_utils import throttle_analyst
 
 
 analyst_agent = Agent(
     name="analyst_agent",
     model=get_model(max_tokens=400),
-    before_agent_callback=_throttle_for_cloud_rate_limits,
+    before_agent_callback=throttle_analyst,
     description=(
         "Analyzes meeting information and identifies priorities, "
         "concerns, risks, and discussion points."

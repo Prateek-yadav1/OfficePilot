@@ -1,7 +1,6 @@
 """Simple local benchmark and cost estimate for OfficePilot."""
 
 from __future__ import annotations
-
 import json
 import os
 import sys

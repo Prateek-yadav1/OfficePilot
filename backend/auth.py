@@ -18,6 +18,10 @@ class AuthenticatedUser:
 def _configured_users() -> dict[str, dict[str, Any]]:
     raw_users = os.getenv("OFFICEPILOT_AUTH_USERS", "").strip()
     if not raw_users:
+        from dotenv import load_dotenv
+        load_dotenv()
+        raw_users = os.getenv("OFFICEPILOT_AUTH_USERS", "").strip()
+    if not raw_users:
         raise RuntimeError("OFFICEPILOT_AUTH_USERS is required.")
     try:
         configured = json.loads(raw_users)

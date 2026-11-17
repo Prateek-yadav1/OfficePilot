@@ -1,19 +1,18 @@
-import asyncio
 from google.adk.agents import Agent
 
-from backend.llm_config import get_llm_provider_settings
 from .config import get_model
+from .retry_utils import throttle_standard
 
 
 async def _throttle_for_cloud_rate_limits(callback_context):
     if get_llm_provider_settings("adk").provider == "groq":
-        await asyncio.sleep(12)
+        await asyncio.sleep(20)
 
 
 briefing_agent = Agent(
     name="briefing_agent",
     model=get_model(max_tokens=600),
-    before_agent_callback=_throttle_for_cloud_rate_limits,
+    before_agent_callback=throttle_standard,
     description=(
         "Creates a concise executive meeting briefing "
         "from verified context and analysis."

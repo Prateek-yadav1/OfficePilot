@@ -1,10 +1,12 @@
 import re
 
 
+_TITLE_PREFIX = r"(?:(?:Dr|Mr|Mrs|Ms|Prof)\.\s*)?"
+
 _CLIENT_PATTERNS = (
     re.compile(
         r"\b(?:meeting|call|discussion|appointment)\s+with\s+"
-        r"(?P<client>[^.!?,;\n]+)",
+        rf"(?P<client>{_TITLE_PREFIX}[^!?,;\n]+)",
         flags=re.IGNORECASE,
     ),
     re.compile(
@@ -47,6 +49,10 @@ def extract_explicit_client(request: str) -> str | None:
             flags=re.IGNORECASE,
         ).strip()
         client = re.sub(r"^(?:my|the)\s+", "", client, flags=re.IGNORECASE)
+        if client.endswith("."):
+            words = client.split()
+            if words and words[-1] not in {"Dr.", "Mr.", "Mrs.", "Ms.", "Prof."}:
+                client = client[:-1].strip()
         if client.casefold() not in _GENERIC_CLIENT_PHRASES:
             return client or None
     return None

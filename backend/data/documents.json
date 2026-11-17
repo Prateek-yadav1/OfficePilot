@@ -33,5 +33,12 @@
     "title": "XYZ Pricing Review Notes",
     "type": "meeting_notes",
     "content": "SYNTHETIC TEST DATA: The pricing review should cover the updated enterprise proposal, package scope, and commercial terms. These are sample discussion topics, not verified client instructions."
+  },
+  {"tenant_id": "local-demo",
+    "client": "Dr. Satyendr Singh",
+    "title": "PRJ4 Meeting and Discussion",
+    "type": "meeting_notes",
+    "content": "Discussion about PRJ4 project requirements and next steps. The client requested a follow-up meeting to finalize the project scope and timeline. and also the progress of the project."
+
   }
 ]
