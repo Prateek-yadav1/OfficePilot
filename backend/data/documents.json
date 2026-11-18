@@ -34,11 +34,25 @@
     "type": "meeting_notes",
     "content": "SYNTHETIC TEST DATA: The pricing review should cover the updated enterprise proposal, package scope, and commercial terms. These are sample discussion topics, not verified client instructions."
   },
-  {"tenant_id": "local-demo",
+  {
+    "tenant_id": "local-demo",
     "client": "Dr. Satyendr Singh",
     "title": "PRJ4 Meeting and Discussion",
     "type": "meeting_notes",
-    "content": "Discussion about PRJ4 project requirements and next steps. The client requested a follow-up meeting to finalize the project scope and timeline. and also the progress of the project."
-
+    "content": "Discussion about PRJ4 project requirements and next steps. The client requested a follow-up meeting to finalize the project scope and timeline and also the progress of the project."
+  },
+  {
+    "tenant_id": "local-demo",
+    "client": "Dr. Satyendr Singh",
+    "title": "PRJ4 Project Status & Evaluation Guidelines",
+    "type": "project_brief",
+    "content": "Major Project IV (PRJ4) — Mentor: Dr. Satyendr Singh. Project Title: OfficePilot — AI-Powered Meeting Preparation Assistant. Current Status: Internal evaluations and Mid-Semester presentations underway. Key Requirements fulfilled: (1) Context Sharing and State Updates between agents via ADK session state. (2) Tool Integration via MCP — Gmail search tool and PostgreSQL/pgvector document retrieval tool integrated. (3) Structured Output via Pydantic for all tool responses and final briefing. (4) Agentic design patterns implemented: parallel research, sequential analysis, reflection/rework loop, human-in-the-loop. (5) Task Monitoring and Logging via before_agent_callback and observability event hooks on all agents. (6) Agent-to-Agent communication via A2A protocol — ADK workflow delegates to CrewAI research agent via A2A. (7) Both CrewAI and Google ADK frameworks are used. (8) Guardrails: toxicity detection, prompt injection prevention, Pydantic type validation, Groq rate-limit handling. (9) Observability via Langfuse tracing integration (opt-in). (10) End-to-end performance evaluation with cost and running-time estimates in BENCHMARK_REPORT.md. (11) Deployed via Cloudflare Tunnel providing a persistent public HTTPS URL. Review schedule: Weekly progress reviews Wednesdays 3:00–5:00 PM. Compulsory attendance for all project reviews. Deliverables: system architecture documentation, GitHub repository, live demo."
+  },
+  {
+    "tenant_id": "local-demo",
+    "client": "Satyendr Singh",
+    "title": "PRJ4 Project Status & Evaluation Guidelines",
+    "type": "project_brief",
+    "content": "Major Project IV (PRJ4) — Mentor: Dr. Satyendr Singh. Project Title: OfficePilot — AI-Powered Meeting Preparation Assistant. Current Status: Internal evaluations and Mid-Semester presentations underway. Key Requirements fulfilled: (1) Context Sharing and State Updates between agents via ADK session state. (2) Tool Integration via MCP — Gmail search tool and PostgreSQL/pgvector document retrieval tool integrated. (3) Structured Output via Pydantic for all tool responses and final briefing. (4) Agentic design patterns implemented: parallel research, sequential analysis, reflection/rework loop, human-in-the-loop. (5) Task Monitoring and Logging via before_agent_callback and observability event hooks on all agents. (6) Agent-to-Agent communication via A2A protocol — ADK workflow delegates to CrewAI research agent via A2A. (7) Both CrewAI and Google ADK frameworks are used. (8) Guardrails: toxicity detection, prompt injection prevention, Pydantic type validation, Groq rate-limit handling. (9) Observability via Langfuse tracing integration (opt-in). (10) End-to-end performance evaluation with cost and running-time estimates in BENCHMARK_REPORT.md. (11) Deployed via Cloudflare Tunnel providing a persistent public HTTPS URL. Review schedule: Weekly progress reviews Wednesdays 3:00–5:00 PM. Compulsory attendance for all project reviews. Deliverables: system architecture documentation, GitHub repository, live demo."
   }
 ]
